@@ -127,7 +127,7 @@
 
     .heart {
       display: inline-block;
-      color: #e91e63;
+      color: #e91e63 !important; /* Toujours rouge, peu importe le thème */
       animation: heartBeat 1.5s infinite;
     }
 
@@ -143,9 +143,71 @@
       font-size: 1rem;
       opacity: 0.8;
     }
+
+    /* Style pour les marque-pages */
+    .bookmark-indicator {
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 70%;
+      background-color: #e91e63;
+      border-radius: 2px;
+    }
+
+    /* Style pour les reminders */
+    .reminder-item {
+      transition: all 0.2s ease;
+    }
+
+    .reminder-item:hover {
+      transform: translateX(5px);
+    }
+
+    /* Style pour les douas */
+    .doua-card {
+      transition: all 0.3s ease;
+    }
+
+    .doua-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      max-width: 350px;
+      background-color: #4caf50;
+      color: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .toast.error {
+      background-color: #f44336;
+    }
   </style>
 </head>
 <body class="font-sans bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200">
+<!-- Toast notification -->
+<div id="toast" class="toast">
+  <div id="toast-message"></div>
+</div>
+
 <div class="container mx-auto px-4 py-8 max-w-lg">
   <header class="text-center mb-4">
     <h1 class="text-3xl font-bold text-primary mb-2" id="app-title">Horaires des Prières</h1>
@@ -156,7 +218,7 @@
   <!-- Signature d'amour H & A -->
   <div class="love-signature text-center mb-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 shadow-sm">
     <div class="initials text-primary">
-      A <span class="heart">&hearts;</span> H
+      H <span class="heart">&hearts;</span> A
     </div>
     <p class="love-quote text-gray-600 dark:text-gray-400">
       "L'amour est le soleil de nos vies, illuminant chaque prière."
@@ -171,6 +233,10 @@
     <button id="tab-quran"
             class="tab-btn py-2 px-4 font-medium text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-primary hover:border-primary">
       <i class="fas fa-book-quran mr-2"></i><span class="tab-text">Coran</span>
+    </button>
+    <button id="tab-douas"
+            class="tab-btn py-2 px-4 font-medium text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-primary hover:border-primary">
+      <i class="fas fa-hands-praying mr-2"></i><span class="tab-text">Douas</span>
     </button>
     <button id="tab-settings"
             class="tab-btn py-2 px-4 font-medium text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-primary hover:border-primary ml-auto">
@@ -296,6 +362,14 @@
       </div>
     </div>
 
+    <!-- Bouton pour reprendre la lecture -->
+    <div id="continue-reading-container" class="mb-6 hidden">
+      <button id="continue-reading" class="w-full bg-secondary hover:bg-secondary/90 text-white py-3 px-4 rounded-md flex items-center justify-center">
+        <i class="fas fa-bookmark mr-2"></i>
+        <span id="continue-reading-text">Reprendre la lecture</span>
+      </button>
+    </div>
+
     <div id="quran-loading" class="flex justify-center my-12 hidden">
       <div class="loader w-12 h-12 border-4 border-gray-300 dark:border-gray-700 rounded-full"></div>
     </div>
@@ -312,12 +386,49 @@
       </div>
       <div id="bismillah" class="text-center mb-6 text-xl arabic-text"></div>
       <div id="verses" class="space-y-4"></div>
+
+      <!-- Boutons d'action pour la sourate -->
+      <div class="mt-6 flex flex-wrap gap-2 justify-center">
+        <button id="create-reminder-btn" class="px-4 py-2 bg-primary text-white rounded-md flex items-center">
+          <i class="fas fa-bell mr-2"></i>
+          <span id="create-reminder-text">Créer un rappel</span>
+        </button>
+        <button id="share-surah-btn" class="px-4 py-2 bg-secondary text-white rounded-md flex items-center">
+          <i class="fas fa-share-alt mr-2"></i>
+          <span id="share-surah-text">Partager</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglet des douas -->
+  <div id="douas-content" class="tab-content">
+    <div class="mb-6">
+      <h2 class="text-xl font-bold text-primary mb-4" id="douas-title">Invocations (Douas)</h2>
+
+      <div class="flex items-center mb-4">
+        <div class="relative flex-1">
+          <input type="text" id="doua-search" placeholder="Rechercher une invocation..."
+                 class="w-full px-4 py-2 pr-10 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-base">
+          <span class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <i class="fas fa-search"></i>
+                    </span>
+        </div>
+        <button id="add-reminder-doua" class="ml-2 p-2 bg-primary text-white rounded-md">
+          <i class="fas fa-bell"></i>
+        </button>
+      </div>
+
+      <!-- Liste des douas -->
+      <div id="douas-list" class="grid gap-4">
+        <!-- Les douas seront ajoutées dynamiquement ici -->
+      </div>
     </div>
   </div>
 
   <!-- Onglet des paramètres -->
   <div id="settings-content" class="tab-content">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
       <h2 class="text-xl font-bold mb-4 text-primary" id="settings-title">Paramètres</h2>
 
       <!-- Sélection de la langue -->
@@ -356,7 +467,7 @@
       </div>
 
       <!-- Sélection de couleur du thème -->
-      <div>
+      <div class="mb-6">
         <h3 class="font-medium mb-2" id="color-title">Couleur du thème</h3>
         <div class="flex flex-wrap gap-2">
           <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
@@ -369,6 +480,88 @@
                   style="background-color: #ff9800;" data-color="#ff9800"></button>
           <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
                   style="background-color: #e91e63;" data-color="#e91e63"></button>
+        </div>
+      </div>
+
+      <!-- Gestion des rappels -->
+      <div>
+        <h3 class="font-medium mb-2" id="reminders-title">Rappels</h3>
+        <div id="reminders-list" class="bg-gray-50 dark:bg-gray-700 rounded-md p-4 space-y-2">
+          <!-- Les rappels seront ajoutés dynamiquement ici -->
+          <div id="no-reminders" class="text-center text-gray-500 dark:text-gray-400 py-2">
+            <p id="no-reminders-text">Aucun rappel configuré</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal pour créer un rappel -->
+  <div id="reminder-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold mb-4 text-primary" id="reminder-modal-title">Créer un rappel</h3>
+
+      <div class="mb-4">
+        <label for="reminder-title" class="block mb-1 font-medium" id="reminder-title-label">Titre du rappel</label>
+        <input type="text" id="reminder-title" class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+      </div>
+
+      <div class="mb-4 grid grid-cols-2 gap-4">
+        <div>
+          <label for="reminder-date" class="block mb-1 font-medium" id="reminder-date-label">Date</label>
+          <input type="date" id="reminder-date" class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+        </div>
+        <div>
+          <label for="reminder-time" class="block mb-1 font-medium" id="reminder-time-label">Heure</label>
+          <input type="time" id="reminder-time" class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="flex items-center">
+          <input type="checkbox" id="reminder-repeat" class="mr-2">
+          <span id="reminder-repeat-label">Répéter chaque jour</span>
+        </label>
+      </div>
+
+      <input type="hidden" id="reminder-surah-id">
+      <input type="hidden" id="reminder-doua-id">
+      <input type="hidden" id="reminder-verse-id">
+      <input type="hidden" id="reminder-type">
+
+      <div class="flex justify-end gap-2 mt-6">
+        <button id="cancel-reminder" class="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md">
+          <span id="cancel-reminder-text">Annuler</span>
+        </button>
+        <button id="save-reminder" class="px-4 py-2 bg-primary text-white rounded-md">
+          <span id="save-reminder-text">Enregistrer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal pour partager -->
+  <div id="share-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+      <h3 class="text-lg font-bold mb-4 text-primary" id="share-modal-title">Partager</h3>
+
+      <div class="mb-4">
+        <textarea id="share-content" class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-base min-h-[100px]" readonly></textarea>
+      </div>
+
+      <div class="flex justify-between gap-2 mt-6">
+        <button id="close-share" class="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md">
+          <span id="close-share-text">Fermer</span>
+        </button>
+        <div class="flex gap-2">
+          <button id="copy-share" class="px-4 py-2 bg-primary text-white rounded-md">
+            <i class="fas fa-copy mr-2"></i>
+            <span id="copy-share-text">Copier</span>
+          </button>
+          <button id="native-share" class="px-4 py-2 bg-secondary text-white rounded-md">
+            <i class="fas fa-share-alt mr-2"></i>
+            <span id="native-share-text">Partager</span>
+          </button>
         </div>
       </div>
     </div>

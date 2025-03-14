@@ -1,8 +1,10 @@
+// Translations
 const translations = {
     fr: {
         appTitle: "Horaires des Prières",
         prayers: "Prières",
         quran: "Coran",
+        douas: "Douas",
         settings: "Paramètres",
         nextPrayer: "Prochaine prière",
         fajrName: "Fajr",
@@ -29,12 +31,39 @@ const translations = {
         languageTitle: "Langue",
         themeTitle: "Thème",
         themeDescription: "Basculer entre les thèmes clair et sombre",
-        colorTitle: "Couleur du thème"
+        colorTitle: "Couleur du thème",
+        douas: "Douas",
+        douasTitle: "Invocations (Douas)",
+        createReminder: "Créer un rappel",
+        share: "Partager",
+        remindersTitle: "Rappels",
+        noReminders: "Aucun rappel configuré",
+        reminderModalTitle: "Créer un rappel",
+        reminderTitleLabel: "Titre du rappel",
+        reminderDateLabel: "Date",
+        reminderTimeLabel: "Heure",
+        reminderRepeatLabel: "Répéter chaque jour",
+        cancel: "Annuler",
+        save: "Enregistrer",
+        shareModalTitle: "Partager",
+        copy: "Copier",
+        nativeShare: "Partager",
+        close: "Fermer",
+        reminderCreated: "Rappel créé avec succès",
+        copied: "Copié dans le presse-papiers",
+        continueReading: "Reprendre la lecture",
+        searchDoua: "Rechercher une invocation...",
+        deleteReminder: "Supprimer",
+        confirmDelete: "Êtes-vous sûr de vouloir supprimer ce rappel?",
+        yes: "Oui",
+        no: "Non",
+        reminderDeleted: "Rappel supprimé"
     },
     en: {
         appTitle: "Prayer Times",
         prayers: "Prayers",
         quran: "Quran",
+        douas: "Duas",
         settings: "Settings",
         nextPrayer: "Next Prayer",
         fajrName: "Fajr",
@@ -61,12 +90,39 @@ const translations = {
         languageTitle: "Language",
         themeTitle: "Theme",
         themeDescription: "Toggle between light and dark themes",
-        colorTitle: "Theme Color"
+        colorTitle: "Theme Color",
+        douas: "Duas",
+        douasTitle: "Supplications (Duas)",
+        createReminder: "Create Reminder",
+        share: "Share",
+        remindersTitle: "Reminders",
+        noReminders: "No reminders configured",
+        reminderModalTitle: "Create Reminder",
+        reminderTitleLabel: "Reminder Title",
+        reminderDateLabel: "Date",
+        reminderTimeLabel: "Time",
+        reminderRepeatLabel: "Repeat daily",
+        cancel: "Cancel",
+        save: "Save",
+        shareModalTitle: "Share",
+        copy: "Copy",
+        nativeShare: "Share",
+        close: "Close",
+        reminderCreated: "Reminder created successfully",
+        copied: "Copied to clipboard",
+        continueReading: "Continue Reading",
+        searchDoua: "Search for a supplication...",
+        deleteReminder: "Delete",
+        confirmDelete: "Are you sure you want to delete this reminder?",
+        yes: "Yes",
+        no: "No",
+        reminderDeleted: "Reminder deleted"
     },
     ar: {
         appTitle: "مواقيت الصلاة",
         prayers: "الصلوات",
         quran: "القرآن",
+        douas: "الأدعية",
         settings: "الإعدادات",
         nextPrayer: "الصلاة القادمة",
         fajrName: "الفجر",
@@ -93,24 +149,139 @@ const translations = {
         languageTitle: "اللغة",
         themeTitle: "السمة",
         themeDescription: "التبديل بين السمات الفاتحة والداكنة",
-        colorTitle: "لون السمة"
+        colorTitle: "لون السمة",
+        douas: "الأدعية",
+        douasTitle: "الأدعية والأذكار",
+        createReminder: "إنشاء تذكير",
+        share: "مشاركة",
+        remindersTitle: "التذكيرات",
+        noReminders: "لا توجد تذكيرات",
+        reminderModalTitle: "إنشاء تذكير",
+        reminderTitleLabel: "عنوان التذكير",
+        reminderDateLabel: "التاريخ",
+        reminderTimeLabel: "الوقت",
+        reminderRepeatLabel: "تكرار يوميًا",
+        cancel: "إلغاء",
+        save: "حفظ",
+        shareModalTitle: "مشاركة",
+        copy: "نسخ",
+        nativeShare: "مشاركة",
+        close: "إغلاق",
+        reminderCreated: "تم إنشاء التذكير بنجاح",
+        copied: "تم النسخ إلى الحافظة",
+        continueReading: "متابعة القراءة",
+        searchDoua: "البحث عن دعاء...",
+        deleteReminder: "حذف",
+        confirmDelete: "هل أنت متأكد من أنك تريد حذف هذا التذكير؟",
+        yes: "نعم",
+        no: "لا",
+        reminderDeleted: "تم حذف التذكير"
     }
 };
 
-// Dark mode detection
-if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    document.documentElement.classList.add('dark');
-    document.getElementById('theme-toggle').checked = true;
-}
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
-    if (event.matches) {
-        document.documentElement.classList.add('dark');
-        document.getElementById('theme-toggle').checked = true;
-    } else {
-        document.documentElement.classList.remove('dark');
-        document.getElementById('theme-toggle').checked = false;
+// Douas list - Une liste d'invocations communes
+const douasList = [
+    {
+        id: 1,
+        titleFr: "Invocation du matin",
+        titleEn: "Morning Supplication",
+        titleAr: "دعاء الصباح",
+        textFr: "Au nom d'Allah, avec le nom d'Allah, rien sur terre ou dans les cieux ne peut causer de tort, Il est Celui qui entend tout et sait tout.",
+        textEn: "In the name of Allah, with the name of Allah, nothing on the earth or in the heaven can cause harm, and He is the All-Hearing and All-Knowing.",
+        textAr: "بِسْمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسْمِهِ شَيْءٌ فِي الْأَرْضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ الْعَلِيمُ",
+        category: "daily"
+    },
+    {
+        id: 2,
+        titleFr: "Invocation du soir",
+        titleEn: "Evening Supplication",
+        titleAr: "دعاء المساء",
+        textFr: "Nous voici au soir, et le royaume appartient toujours à Allah. Louange à Allah, il n'y a de divinité qu'Allah, l'Unique, sans associé.",
+        textEn: "We have reached the evening and the kingdom still belongs to Allah. Praise is to Allah, there is no deity except Allah, the One, without partner.",
+        textAr: "أَمْسَيْنَا وَأَمْسَى الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ",
+        category: "daily"
+    },
+    {
+        id: 3,
+        titleFr: "Protection contre le mal",
+        titleEn: "Protection from Evil",
+        titleAr: "دعاء الاستعاذة من الشر",
+        textFr: "Je cherche refuge auprès d'Allah contre Satan le maudit. Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux.",
+        textEn: "I seek refuge with Allah from Satan, the accursed one. In the name of Allah, the Most Gracious, the Most Merciful.",
+        textAr: "أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ. بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ",
+        category: "protection"
+    },
+    {
+        id: 4,
+        titleFr: "Invocation avant de manger",
+        titleEn: "Supplication before Eating",
+        titleAr: "دعاء قبل الطعام",
+        textFr: "Au nom d'Allah, et avec les bénédictions d'Allah.",
+        textEn: "In the name of Allah, and with the blessings of Allah.",
+        textAr: "بِسْمِ اللَّهِ وَعَلَى بَرَكَةِ اللَّهِ",
+        category: "daily"
+    },
+    {
+        id: 5,
+        titleFr: "Invocation après avoir mangé",
+        titleEn: "Supplication after Eating",
+        titleAr: "دعاء بعد الطعام",
+        textFr: "Louange à Allah qui nous a nourris, nous a donné à boire, et a fait de nous des musulmans.",
+        textEn: "Praise be to Allah who has fed us, given us drink, and made us Muslims.",
+        textAr: "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مِنَ الْمُسْلِمِينَ",
+        category: "daily"
+    },
+    {
+        id: 6,
+        titleFr: "Invocation en entrant dans la mosquée",
+        titleEn: "Supplication when Entering the Mosque",
+        titleAr: "دعاء دخول المسجد",
+        textFr: "Au nom d'Allah. O Allah, accorde Ta miséricorde à Muhammad. O Allah, pardonne-moi mes péchés, et ouvre-moi les portes de Ta miséricorde.",
+        textEn: "In the name of Allah. O Allah, send blessings upon Muhammad. O Allah, forgive me my sins and open for me the gates of Your mercy.",
+        textAr: "بِسْمِ اللَّهِ، وَالصَّلَاةُ وَالسَّلَامُ عَلَى رَسُولِ اللَّهِ، اللَّهُمَّ اغْفِرْ لِي ذُنُوبِي وَافْتَحْ لِي أَبْوَابَ رَحْمَتِكَ",
+        category: "mosque"
+    },
+    {
+        id: 7,
+        titleFr: "Invocation de détresse",
+        titleEn: "Supplication of Distress",
+        titleAr: "دعاء الكرب",
+        textFr: "Il n'y a de divinité qu'Allah, Le Très Grand, Le Magnanime. Il n'y a de divinité qu'Allah, Le Seigneur du Trône immense.",
+        textEn: "There is no deity but Allah, the Great, the Tolerant. There is no deity but Allah, Lord of the Magnificent Throne.",
+        textAr: "لَا إِلَهَ إِلَّا اللَّهُ الْعَظِيمُ الْحَلِيمُ، لَا إِلَهَ إِلَّا اللَّهُ رَبُّ الْعَرْشِ الْعَظِيمِ",
+        category: "difficulty"
+    },
+    {
+        id: 8,
+        titleFr: "Invocation avant de dormir",
+        titleEn: "Supplication before Sleeping",
+        titleAr: "دعاء قبل النوم",
+        textFr: "Au nom d'Allah, je meurs et je vis.",
+        textEn: "In Your name, O Allah, I die and I live.",
+        textAr: "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا",
+        category: "daily"
+    },
+    {
+        id: 9,
+        titleFr: "Invocation pour les parents",
+        titleEn: "Supplication for Parents",
+        titleAr: "دعاء للوالدين",
+        textFr: "Ô Seigneur ! Fais-leur miséricorde comme ils m'ont élevé tout petit.",
+        textEn: "My Lord! Bestow on them Your Mercy as they did bring me up when I was small.",
+        textAr: "رَبِّ ارْحَمْهُمَا كَمَا رَبَّيَانِي صَغِيرًا",
+        category: "family"
+    },
+    {
+        id: 10,
+        titleFr: "Demande de pardon",
+        titleEn: "Seeking Forgiveness",
+        titleAr: "الاستغفار",
+        textFr: "Je demande pardon à Allah, mon Seigneur, pour tout péché, et je me repens auprès de Lui.",
+        textEn: "I seek forgiveness from Allah, my Lord, for every sin, and I turn to Him in repentance.",
+        textAr: "أَسْتَغْفِرُ اللَّهَ رَبِّي مِنْ كُلِّ ذَنْبٍ وَأَتُوبُ إِلَيْهِ",
+        category: "forgiveness"
     }
-});
+];
 
 // DOM Elements
 const locationPermissionEl = document.getElementById('location-permission');
@@ -146,6 +317,50 @@ const verses = document.getElementById('verses');
 const themeToggle = document.getElementById('theme-toggle');
 const languageBtns = document.querySelectorAll('.language-btn');
 const colorBtns = document.querySelectorAll('.color-btn');
+const continueReadingBtn = document.getElementById('continue-reading');
+const continueReadingContainer = document.getElementById('continue-reading-container');
+const continueReadingTextEl = document.getElementById('continue-reading-text');
+const douasListEl = document.getElementById('douas-list');
+const douaSearchEl = document.getElementById('doua-search');
+const douasTitleEl = document.getElementById('douas-title');
+const createReminderBtn = document.getElementById('create-reminder-btn');
+const createReminderTextEl = document.getElementById('create-reminder-text');
+const shareSurahBtn = document.getElementById('share-surah-btn');
+const shareSurahTextEl = document.getElementById('share-surah-text');
+const reminderModal = document.getElementById('reminder-modal');
+const reminderModalTitle = document.getElementById('reminder-modal-title');
+const reminderTitleInput = document.getElementById('reminder-title');
+const reminderTitleLabel = document.getElementById('reminder-title-label');
+const reminderDateInput = document.getElementById('reminder-date');
+const reminderDateLabel = document.getElementById('reminder-date-label');
+const reminderTimeInput = document.getElementById('reminder-time');
+const reminderTimeLabel = document.getElementById('reminder-time-label');
+const reminderRepeatCheckbox = document.getElementById('reminder-repeat');
+const reminderRepeatLabel = document.getElementById('reminder-repeat-label');
+const reminderSurahIdInput = document.getElementById('reminder-surah-id');
+const reminderDouaIdInput = document.getElementById('reminder-doua-id');
+const reminderVerseIdInput = document.getElementById('reminder-verse-id');
+const reminderTypeInput = document.getElementById('reminder-type');
+const cancelReminderBtn = document.getElementById('cancel-reminder');
+const cancelReminderText = document.getElementById('cancel-reminder-text');
+const saveReminderBtn = document.getElementById('save-reminder');
+const saveReminderText = document.getElementById('save-reminder-text');
+const shareModal = document.getElementById('share-modal');
+const shareModalTitle = document.getElementById('share-modal-title');
+const shareContentTextarea = document.getElementById('share-content');
+const closeShareBtn = document.getElementById('close-share');
+const closeShareText = document.getElementById('close-share-text');
+const copyShareBtn = document.getElementById('copy-share');
+const copyShareText = document.getElementById('copy-share-text');
+const nativeShareBtn = document.getElementById('native-share');
+const nativeShareText = document.getElementById('native-share-text');
+const remindersTitle = document.getElementById('reminders-title');
+const remindersListEl = document.getElementById('reminders-list');
+const noRemindersEl = document.getElementById('no-reminders');
+const noRemindersText = document.getElementById('no-reminders-text');
+const addReminderDoua = document.getElementById('add-reminder-doua');
+const toast = document.getElementById('toast');
+const toastMessage = document.getElementById('toast-message');
 
 // Prayer times mapping
 const prayerCards = {
@@ -174,6 +389,247 @@ let nextPrayer = null;
 let countdownInterval = null;
 let currentLanguage = 'fr';
 let primaryColor = '#5D5CDE';
+let currentSurah = null;
+let bookmarkData = null;
+let reminders = [];
+
+// Show toast message
+function showToast(message, isError = false) {
+    toastMessage.textContent = message;
+    toast.classList.toggle('error', isError);
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
+}
+
+// Load bookmarks from localStorage
+function loadBookmarks() {
+    try {
+        const bookmarksStr = localStorage.getItem('quran_bookmarks');
+        if (bookmarksStr) {
+            return JSON.parse(bookmarksStr);
+        }
+    } catch (error) {
+        console.error('Error loading bookmarks:', error);
+    }
+    return null;
+}
+
+// Save bookmark to localStorage
+function saveBookmark(surahNumber, versesNumber, verseId) {
+    try {
+        const bookmark = {
+            surahNumber,
+            versesNumber,
+            verseId,
+            timestamp: new Date().getTime()
+        };
+        localStorage.setItem('quran_bookmarks', JSON.stringify(bookmark));
+    } catch (error) {
+        console.error('Error saving bookmark:', error);
+    }
+}
+
+// Check if there's a bookmark and update UI
+function checkAndDisplayBookmark() {
+    bookmarkData = loadBookmarks();
+
+    if (bookmarkData) {
+        continueReadingContainer.classList.remove('hidden');
+
+        // Get the surah name if possible
+        let surahName = '';
+        const surahOption = Array.from(surahSelect.options).find(opt => opt.value === bookmarkData.surahNumber.toString());
+        if (surahOption) {
+            surahName = surahOption.textContent.split('.')[1].trim();
+        }
+
+        if (surahName) {
+            continueReadingBtn.title = `${surahName}, verset ${bookmarkData.versesNumber}`;
+        }
+    } else {
+        continueReadingContainer.classList.add('hidden');
+    }
+}
+
+// Load reminders from localStorage
+function loadReminders() {
+    try {
+        const remindersStr = localStorage.getItem('prayer_reminders');
+        if (remindersStr) {
+            reminders = JSON.parse(remindersStr);
+        } else {
+            reminders = [];
+        }
+    } catch (error) {
+        console.error('Error loading reminders:', error);
+        reminders = [];
+    }
+
+    updateRemindersDisplay();
+    checkUpcomingReminders();
+}
+
+// Save reminders to localStorage
+function saveReminders() {
+    try {
+        localStorage.setItem('prayer_reminders', JSON.stringify(reminders));
+    } catch (error) {
+        console.error('Error saving reminders:', error);
+    }
+
+    updateRemindersDisplay();
+}
+
+// Update reminders display in the settings tab
+function updateRemindersDisplay() {
+    // Clear existing reminders
+    const existingReminders = remindersListEl.querySelectorAll('.reminder-item');
+    existingReminders.forEach(el => el.remove());
+
+    if (reminders.length === 0) {
+        noRemindersEl.classList.remove('hidden');
+    } else {
+        noRemindersEl.classList.add('hidden');
+
+        // Add reminders to the list
+        reminders.forEach((reminder, index) => {
+            const reminderEl = document.createElement('div');
+            reminderEl.className = 'reminder-item bg-white dark:bg-gray-800 p-3 rounded-md flex justify-between items-center';
+            reminderEl.dataset.index = index;
+
+            // Format date and time
+            const date = new Date(reminder.datetime);
+            const formattedDate = date.toLocaleDateString(currentLanguage === 'fr' ? 'fr-FR' :
+                currentLanguage === 'en' ? 'en-US' : 'ar-SA');
+            const formattedTime = date.toLocaleTimeString(currentLanguage === 'fr' ? 'fr-FR' :
+                    currentLanguage === 'en' ? 'en-US' : 'ar-SA',
+                { hour: '2-digit', minute: '2-digit' });
+
+            // Create reminder info
+            const reminderInfo = document.createElement('div');
+            reminderInfo.className = 'flex-1';
+
+            const reminderTitle = document.createElement('div');
+            reminderTitle.className = 'font-medium';
+            reminderTitle.textContent = reminder.title;
+
+            const reminderDetails = document.createElement('div');
+            reminderDetails.className = 'text-sm text-gray-500 dark:text-gray-400';
+            reminderDetails.textContent = `${formattedDate}, ${formattedTime}${reminder.repeat ? ' - ' + (currentLanguage === 'fr' ? 'Quotidien' : currentLanguage === 'en' ? 'Daily' : 'يومي') : ''}`;
+
+            reminderInfo.appendChild(reminderTitle);
+            reminderInfo.appendChild(reminderDetails);
+
+            // Create delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-red-500 hover:text-red-700 p-1';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.title = translations[currentLanguage].deleteReminder;
+
+            deleteBtn.addEventListener('click', () => {
+                if (confirm(translations[currentLanguage].confirmDelete)) {
+                    reminders.splice(index, 1);
+                    saveReminders();
+                    showToast(translations[currentLanguage].reminderDeleted);
+                }
+            });
+
+            reminderEl.appendChild(reminderInfo);
+            reminderEl.appendChild(deleteBtn);
+
+            remindersListEl.insertBefore(reminderEl, noRemindersEl);
+        });
+    }
+}
+
+// Check for upcoming reminders
+function checkUpcomingReminders() {
+    const now = new Date();
+
+    reminders.forEach((reminder, index) => {
+        const reminderTime = new Date(reminder.datetime);
+
+        // If reminder is due
+        if (reminderTime <= now) {
+            // Show notification if possible
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(reminder.title, {
+                    body: reminder.content,
+                    icon: 'https://i.imgur.com/favicon.ico'
+                });
+
+                notification.onclick = function() {
+                    window.focus();
+                    this.close();
+                };
+            }
+
+            // If it's a repeating reminder, update for tomorrow
+            if (reminder.repeat) {
+                const tomorrow = new Date(reminderTime);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                reminders[index].datetime = tomorrow.toISOString();
+            } else {
+                // Remove one-time reminders that are done
+                reminders.splice(index, 1);
+            }
+
+            saveReminders();
+        }
+    });
+
+    // Check again in a minute
+    setTimeout(checkUpcomingReminders, 60000);
+}
+
+// Create a reminder for reading
+function createReading(type, id, title, content) {
+    // Reset and prepare modal
+    reminderTitleInput.value = title;
+
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    reminderDateInput.value = dateStr;
+
+    const timeStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
+    reminderTimeInput.value = timeStr;
+
+    reminderRepeatCheckbox.checked = false;
+
+    reminderSurahIdInput.value = '';
+    reminderDouaIdInput.value = '';
+    reminderVerseIdInput.value = '';
+
+    // Set appropriate values based on type
+    reminderTypeInput.value = type;
+    if (type === 'surah') {
+        reminderSurahIdInput.value = id;
+    } else if (type === 'doua') {
+        reminderDouaIdInput.value = id;
+    } else if (type === 'verse') {
+        reminderVerseIdInput.value = id;
+        reminderSurahIdInput.value = currentSurah?.number || '';
+    }
+
+    // Show modal
+    reminderModal.classList.remove('hidden');
+}
+
+// Share content function
+function shareContentFunc(title, content) {
+    shareContentTextarea.value = content;
+    shareModal.classList.remove('hidden');
+
+    // Check if Web Share API is available
+    if (navigator.share) {
+        nativeShareBtn.classList.remove('hidden');
+    } else {
+        nativeShareBtn.classList.add('hidden');
+    }
+}
 
 // Apply language
 function applyLanguage(lang) {
@@ -183,6 +639,7 @@ function applyLanguage(lang) {
     // Update tab buttons
     document.querySelector('#tab-prayers .tab-text').textContent = t.prayers;
     document.querySelector('#tab-quran .tab-text').textContent = t.quran;
+    document.querySelector('#tab-douas .tab-text').textContent = t.douas;
     document.querySelector('#tab-settings .tab-text').textContent = t.settings;
 
     // Update header
@@ -218,6 +675,15 @@ function applyLanguage(lang) {
     }
     loadSurahTextEl.textContent = t.read;
     quranErrorTextEl.textContent = t.quranError;
+    continueReadingTextEl.textContent = t.continueReading;
+
+    // Update quran action buttons
+    createReminderTextEl.textContent = t.createReminder;
+    shareSurahTextEl.textContent = t.share;
+
+    // Update Douas section
+    douasTitleEl.textContent = t.douasTitle;
+    douaSearchEl.placeholder = t.searchDoua;
 
     // Update settings section
     document.getElementById('settings-title').textContent = t.settingsTitle;
@@ -225,6 +691,23 @@ function applyLanguage(lang) {
     document.getElementById('theme-title').textContent = t.themeTitle;
     document.getElementById('theme-description').textContent = t.themeDescription;
     document.getElementById('color-title').textContent = t.colorTitle;
+    remindersTitle.textContent = t.remindersTitle;
+    noRemindersText.textContent = t.noReminders;
+
+    // Update reminder modal
+    reminderModalTitle.textContent = t.reminderModalTitle;
+    reminderTitleLabel.textContent = t.reminderTitleLabel;
+    reminderDateLabel.textContent = t.reminderDateLabel;
+    reminderTimeLabel.textContent = t.reminderTimeLabel;
+    reminderRepeatLabel.textContent = t.reminderRepeatLabel;
+    cancelReminderText.textContent = t.cancel;
+    saveReminderText.textContent = t.save;
+
+    // Update share modal
+    shareModalTitle.textContent = t.shareModalTitle;
+    closeShareText.textContent = t.close;
+    copyShareText.textContent = t.copy;
+    nativeShareText.textContent = t.nativeShare;
 
     // Update language buttons highlight
     languageBtns.forEach(btn => {
@@ -243,6 +726,12 @@ function applyLanguage(lang) {
     } else {
         document.body.classList.remove('arabic-text');
     }
+
+    // Update douas list
+    updateDouasList();
+
+    // Update reminders display
+    updateRemindersDisplay();
 
     // Save language preference
     localStorage.setItem('language', lang);
@@ -274,6 +763,85 @@ function timeStringToDate(timeStr, date = new Date()) {
     const timeDate = new Date(date);
     timeDate.setHours(hours, minutes, 0, 0);
     return timeDate;
+}
+
+// Update douas list based on search and language
+function updateDouasList() {
+    douasListEl.innerHTML = '';
+
+    const searchTerm = douaSearchEl.value.toLowerCase();
+    const filteredDouas = douasList.filter(doua => {
+        const titleField = currentLanguage === 'fr' ? doua.titleFr :
+            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
+        const textField = currentLanguage === 'fr' ? doua.textFr :
+            currentLanguage === 'en' ? doua.textEn : doua.textAr;
+
+        return titleField.toLowerCase().includes(searchTerm) ||
+            textField.toLowerCase().includes(searchTerm);
+    });
+
+    filteredDouas.forEach(doua => {
+        const douaCard = document.createElement('div');
+        douaCard.className = 'doua-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 relative';
+        douaCard.dataset.id = doua.id;
+
+        const title = currentLanguage === 'fr' ? doua.titleFr :
+            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
+        const text = currentLanguage === 'fr' ? doua.textFr :
+            currentLanguage === 'en' ? doua.textEn : doua.textAr;
+
+        // Create title
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'font-bold text-primary mb-2';
+        titleEl.textContent = title;
+
+        // Create text
+        const textEl = document.createElement('p');
+        textEl.className = 'mb-4 text-gray-700 dark:text-gray-300';
+        if (currentLanguage === 'ar') {
+            textEl.classList.add('arabic-text', 'text-lg');
+        }
+        textEl.textContent = text;
+
+        // Create actions
+        const actions = document.createElement('div');
+        actions.className = 'flex justify-end gap-2 mt-2';
+
+        // Share button
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'text-gray-500 hover:text-primary';
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        shareBtn.addEventListener('click', () => {
+            const shareTitle = title;
+            const shareText = text;
+            shareContentFunc(shareTitle, shareText);
+        });
+
+        // Reminder button
+        const reminderBtn = document.createElement('button');
+        reminderBtn.className = 'text-gray-500 hover:text-primary ml-4';
+        reminderBtn.innerHTML = '<i class="fas fa-bell"></i>';
+        reminderBtn.addEventListener('click', () => {
+            createReading('doua', doua.id, title, text);
+        });
+
+        actions.appendChild(shareBtn);
+        actions.appendChild(reminderBtn);
+
+        douaCard.appendChild(titleEl);
+        douaCard.appendChild(textEl);
+        douaCard.appendChild(actions);
+
+        douasListEl.appendChild(douaCard);
+    });
+
+    if (filteredDouas.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'text-center text-gray-500 dark:text-gray-400 py-4';
+        noResults.textContent = currentLanguage === 'fr' ? 'Aucun résultat trouvé' :
+            currentLanguage === 'en' ? 'No results found' : 'لا توجد نتائج';
+        douasListEl.appendChild(noResults);
+    }
 }
 
 // Calculate current and next prayer time
@@ -420,14 +988,12 @@ async function fetchPrayerTimes(latitude, longitude, method = 2) {
         const url = `https://api.aladhan.com/v1/timings/${dateStr}?latitude=${latitude}&longitude=${longitude}&method=${method}`;
         const response = await fetch(url);
         const data = await response.json();
-        await fetchQuranSurahs()
+
         if (data.code === 200 && data.data) {
             return data.data;
         } else {
             throw new Error('Erreur lors de la récupération des horaires de prière');
         }
-
-
     } catch (error) {
         console.error('Error fetching prayer times:', error);
         throw error;
@@ -601,6 +1167,9 @@ async function fetchQuranSurahs() {
                 surahSelect.appendChild(option);
             });
 
+            // Check for bookmark
+            checkAndDisplayBookmark();
+
             return true;
         } else {
             throw new Error('Failed to load Quran surahs');
@@ -612,7 +1181,7 @@ async function fetchQuranSurahs() {
 }
 
 // Fetch and display Quran Surah
-async function fetchQuranSurah(surahNumber) {
+async function fetchQuranSurah(surahNumber, scrollToVerse = null) {
     quranLoadingEl.classList.remove('hidden');
     quranErrorEl.classList.add('hidden');
     surahContainer.classList.add('hidden');
@@ -633,33 +1202,33 @@ async function fetchQuranSurah(surahNumber) {
         const data = await response.json();
 
         if (data.code === 200 && data.data) {
-            const surah = data.data;
+            currentSurah = data.data;
 
             // Set surah title
             if (currentLanguage === 'ar') {
-                surahTitle.textContent = surah.name;
+                surahTitle.textContent = currentSurah.name;
                 surahTitle.classList.add('arabic-text');
             } else {
-                surahTitle.textContent = surah.englishName;
+                surahTitle.textContent = currentSurah.englishName;
                 surahTitle.classList.remove('arabic-text');
             }
 
             // Set surah info
             const revelationType = currentLanguage === 'fr' ?
-                (surah.revelationType === 'Meccan' ? 'Mecquoise' : 'Médinoise') :
-                currentLanguage === 'en' ? surah.revelationType :
-                    (surah.revelationType === 'Meccan' ? 'مكية' : 'مدنية');
+                (currentSurah.revelationType === 'Meccan' ? 'Mecquoise' : 'Médinoise') :
+                currentLanguage === 'en' ? currentSurah.revelationType :
+                    (currentSurah.revelationType === 'Meccan' ? 'مكية' : 'مدنية');
 
             const versesCount = currentLanguage === 'fr' ?
-                `${surah.numberOfAyahs} versets` :
+                `${currentSurah.numberOfAyahs} versets` :
                 currentLanguage === 'en' ?
-                    `${surah.numberOfAyahs} verses` :
-                    `${surah.numberOfAyahs} آيات`;
+                    `${currentSurah.numberOfAyahs} verses` :
+                    `${currentSurah.numberOfAyahs} آيات`;
 
             surahInfo.textContent = `${revelationType} · ${versesCount}`;
 
             // Set Bismillah
-            if (surah.number !== 9) {
+            if (currentSurah.number !== 9) {
                 bismillah.textContent = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
                 bismillah.classList.remove('hidden');
             } else {
@@ -670,15 +1239,65 @@ async function fetchQuranSurah(surahNumber) {
             verses.innerHTML = '';
 
             // Add verses
-            surah.ayahs.forEach(ayah => {
+            currentSurah.ayahs.forEach(ayah => {
                 const verseDiv = document.createElement('div');
-                verseDiv.className = 'verse mb-4 pb-4 border-b border-gray-200 dark:border-gray-700';
+                verseDiv.className = 'verse mb-4 pb-4 border-b border-gray-200 dark:border-gray-700 relative';
+                verseDiv.id = `verse-${ayah.numberInSurah}`;
+
+                // Add bookmark indicator if this is the bookmarked verse
+                if (bookmarkData &&
+                    parseInt(bookmarkData.surahNumber) === currentSurah.number &&
+                    parseInt(bookmarkData.versesNumber) === ayah.numberInSurah) {
+                    const bookmarkIndicator = document.createElement('div');
+                    bookmarkIndicator.className = 'bookmark-indicator';
+                    verseDiv.appendChild(bookmarkIndicator);
+                    verseDiv.classList.add('pl-2');
+                }
 
                 const verseNumber = document.createElement('div');
-                verseNumber.className = 'verse-number font-bold text-primary mb-2';
-                verseNumber.textContent = currentLanguage === 'fr' ? `Verset ${ayah.numberInSurah}` :
+                verseNumber.className = 'verse-number font-bold text-primary mb-2 flex justify-between items-center';
+
+                const numberText = document.createElement('span');
+                numberText.textContent = currentLanguage === 'fr' ? `Verset ${ayah.numberInSurah}` :
                     currentLanguage === 'en' ? `Verse ${ayah.numberInSurah}` :
                         `الآية ${ayah.numberInSurah}`;
+
+                // Add bookmark button
+                const bookmarkBtn = document.createElement('button');
+                bookmarkBtn.className = 'text-gray-400 hover:text-primary text-sm';
+                bookmarkBtn.innerHTML = '<i class="fas fa-bookmark"></i>';
+                bookmarkBtn.title = currentLanguage === 'fr' ? 'Marquer ce verset' :
+                    currentLanguage === 'en' ? 'Bookmark this verse' :
+                        'وضع إشارة مرجعية على هذه الآية';
+
+                bookmarkBtn.addEventListener('click', () => {
+                    saveBookmark(currentSurah.number, ayah.numberInSurah, `verse-${ayah.numberInSurah}`);
+
+                    // Remove existing bookmark indicators
+                    const existingIndicators = verses.querySelectorAll('.bookmark-indicator');
+                    existingIndicators.forEach(el => el.remove());
+
+                    verses.querySelectorAll('.verse').forEach(el => {
+                        el.classList.remove('pl-2');
+                    });
+
+                    // Add new indicator
+                    const bookmarkIndicator = document.createElement('div');
+                    bookmarkIndicator.className = 'bookmark-indicator';
+                    verseDiv.prepend(bookmarkIndicator);
+                    verseDiv.classList.add('pl-2');
+
+                    // Update continue reading button
+                    checkAndDisplayBookmark();
+
+                    // Show confirmation
+                    showToast(currentLanguage === 'fr' ? 'Verset marqué' :
+                        currentLanguage === 'en' ? 'Verse bookmarked' :
+                            'تم وضع إشارة مرجعية على الآية');
+                });
+
+                verseNumber.appendChild(numberText);
+                verseNumber.appendChild(bookmarkBtn);
 
                 const verseText = document.createElement('div');
                 verseText.className = 'verse-text';
@@ -687,14 +1306,63 @@ async function fetchQuranSurah(surahNumber) {
                 }
                 verseText.textContent = ayah.text;
 
+                // Add verse actions
+                const verseActions = document.createElement('div');
+                verseActions.className = 'flex justify-end mt-2 gap-2 text-sm';
+
+                // Add reminder button
+                const reminderBtn = document.createElement('button');
+                reminderBtn.className = 'text-gray-400 hover:text-primary';
+                reminderBtn.innerHTML = '<i class="fas fa-bell mr-1"></i>' +
+                    (currentLanguage === 'fr' ? 'Rappel' :
+                        currentLanguage === 'en' ? 'Reminder' : 'تذكير');
+
+                reminderBtn.addEventListener('click', () => {
+                    const title = `${currentSurah.englishName} - ${currentLanguage === 'fr' ? 'Verset' :
+                        currentLanguage === 'en' ? 'Verse' : 'الآية'} ${ayah.numberInSurah}`;
+                    createReading('verse', ayah.numberInSurah, title, ayah.text);
+                });
+
+                // Add share button
+                const shareBtn = document.createElement('button');
+                shareBtn.className = 'text-gray-400 hover:text-primary ml-4';
+                shareBtn.innerHTML = '<i class="fas fa-share-alt mr-1"></i>' +
+                    (currentLanguage === 'fr' ? 'Partager' :
+                        currentLanguage === 'en' ? 'Share' : 'مشاركة');
+
+                shareBtn.addEventListener('click', () => {
+                    const shareTitle = `${currentSurah.englishName} - ${currentLanguage === 'fr' ? 'Verset' :
+                        currentLanguage === 'en' ? 'Verse' : 'الآية'} ${ayah.numberInSurah}`;
+                    const shareText = `${ayah.text}\n\n- ${currentSurah.englishName} (${currentSurah.number}:${ayah.numberInSurah})`;
+                    shareContentFunc(shareTitle, shareText);
+                });
+
+                verseActions.appendChild(reminderBtn);
+                verseActions.appendChild(shareBtn);
+
                 verseDiv.appendChild(verseNumber);
                 verseDiv.appendChild(verseText);
+                verseDiv.appendChild(verseActions);
                 verses.appendChild(verseDiv);
             });
 
             // Show surah container
             quranLoadingEl.classList.add('hidden');
             surahContainer.classList.remove('hidden');
+
+            // Scroll to verse if specified
+            if (scrollToVerse) {
+                setTimeout(() => {
+                    const verseElement = document.getElementById(scrollToVerse);
+                    if (verseElement) {
+                        verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        verseElement.classList.add('bg-primary/5');
+                        setTimeout(() => {
+                            verseElement.classList.remove('bg-primary/5');
+                        }, 2000);
+                    }
+                }, 500);
+            }
         } else {
             throw new Error('Failed to load Quran surah');
         }
@@ -727,9 +1395,9 @@ function applyThemeColor(color) {
                 .bg-primary { background-color: ${color} !important; }
                 .border-primary { border-color: ${color} !important; }
                 .bg-primary\\/10 { background-color: ${color}1A !important; }
+                .bg-primary\\/5 { background-color: ${color}0D !important; }
                 input:checked + .slider { background-color: ${color} !important; }
                 .loader { border-top-color: ${color} !important; }
-                .heart { color: ${color} !important; }
             `;
 
     // Update color button highlights
@@ -766,9 +1434,11 @@ tabBtns.forEach(btn => {
         });
         document.getElementById(`${target}-content`).classList.add('active');
 
-        // Load surah list if quran tab is activated and not already loaded
+        // Load specific content for tabs
         if (target === 'quran' && !surahSelect.options.length) {
             fetchQuranSurahs();
+        } else if (target === 'douas' && douasListEl.children.length === 0) {
+            updateDouasList();
         }
     });
 });
@@ -789,6 +1459,196 @@ loadSurahBtn.addEventListener('click', async () => {
     const surahNumber = surahSelect.value;
     if (surahNumber) {
         await fetchQuranSurah(surahNumber);
+    }
+});
+
+// Continue reading button event handler
+continueReadingBtn.addEventListener('click', async () => {
+    if (bookmarkData) {
+        // Load the surah and scroll to the bookmarked verse
+        await fetchQuranSurah(bookmarkData.surahNumber, bookmarkData.verseId);
+
+        // Make sure the Quran tab is active
+        tabBtns.forEach(btn => {
+            btn.classList.remove('border-primary', 'text-primary');
+            btn.classList.add('text-gray-500', 'dark:text-gray-400', 'border-transparent');
+        });
+
+        document.getElementById('tab-quran').classList.add('border-primary', 'text-primary');
+        document.getElementById('tab-quran').classList.remove('text-gray-500', 'dark:text-gray-400', 'border-transparent');
+
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById('quran-content').classList.add('active');
+    }
+});
+
+// Doua search event handler
+douaSearchEl.addEventListener('input', updateDouasList);
+
+// Create reminder (surah) button handler
+createReminderBtn.addEventListener('click', () => {
+    if (currentSurah) {
+        const title = currentLanguage === 'fr' ? `Lire sourate ${currentSurah.englishName}` :
+            currentLanguage === 'en' ? `Read surah ${currentSurah.englishName}` :
+                `قراءة سورة ${currentSurah.name}`;
+        createReading('surah', currentSurah.number, title, `${currentSurah.englishName} (${currentSurah.numberOfAyahs} ${currentLanguage === 'fr' ? 'versets' : currentLanguage === 'en' ? 'verses' : 'آيات'})`);
+    }
+});
+
+// Share surah button handler
+shareSurahBtn.addEventListener('click', () => {
+    if (currentSurah) {
+        const shareTitle = currentSurah.englishName;
+        const shareText = `${currentLanguage === 'fr' ? 'Sourate' :
+            currentLanguage === 'en' ? 'Surah' : 'سورة'} ${currentSurah.englishName}\n\n${currentLanguage === 'fr' ? 'Type' :
+            currentLanguage === 'en' ? 'Type' : 'النوع'}: ${currentSurah.revelationType === 'Meccan' ?
+            (currentLanguage === 'fr' ? 'Mecquoise' :
+                currentLanguage === 'en' ? 'Meccan' : 'مكية') :
+            (currentLanguage === 'fr' ? 'Médinoise' :
+                currentLanguage === 'en' ? 'Medinan' : 'مدنية')}\n${currentLanguage === 'fr' ? 'Nombre de versets' :
+            currentLanguage === 'en' ? 'Number of verses' : 'عدد الآيات'}: ${currentSurah.numberOfAyahs}`;
+        shareContentFunc(shareTitle, shareText);
+    }
+});
+
+// Add reminder for doua button handler
+addReminderDoua.addEventListener('click', () => {
+    const title = currentLanguage === 'fr' ? 'Rappel pour lire des invocations' :
+        currentLanguage === 'en' ? 'Reminder to read supplications' :
+            'تذكير لقراءة الأدعية';
+    const content = currentLanguage === 'fr' ? 'N\'oubliez pas de lire vos invocations quotidiennes' :
+        currentLanguage === 'en' ? 'Don\'t forget to read your daily supplications' :
+            'لا تنس قراءة أذكارك اليومية';
+    createReading('general', 0, title, content);
+});
+
+// Save reminder button handler
+saveReminderBtn.addEventListener('click', () => {
+    const title = reminderTitleInput.value.trim();
+    if (!title) {
+        alert(currentLanguage === 'fr' ? 'Veuillez saisir un titre pour le rappel' :
+            currentLanguage === 'en' ? 'Please enter a title for the reminder' :
+                'الرجاء إدخال عنوان للتذكير');
+        return;
+    }
+
+    const date = reminderDateInput.value;
+    const time = reminderTimeInput.value;
+    if (!date || !time) {
+        alert(currentLanguage === 'fr' ? 'Veuillez sélectionner une date et une heure' :
+            currentLanguage === 'en' ? 'Please select a date and time' :
+                'الرجاء تحديد تاريخ ووقت');
+        return;
+    }
+
+    const datetime = new Date(`${date}T${time}`);
+    if (isNaN(datetime.getTime())) {
+        alert(currentLanguage === 'fr' ? 'Date ou heure invalide' :
+            currentLanguage === 'en' ? 'Invalid date or time' :
+                'تاريخ أو وقت غير صالح');
+        return;
+    }
+
+    const repeat = reminderRepeatCheckbox.checked;
+    const type = reminderTypeInput.value;
+    const surahId = reminderSurahIdInput.value;
+    const douaId = reminderDouaIdInput.value;
+    const verseId = reminderVerseIdInput.value;
+
+    // Get content based on type
+    let content = '';
+    if (type === 'surah' && currentSurah) {
+        content = `${currentLanguage === 'fr' ? 'Sourate' :
+            currentLanguage === 'en' ? 'Surah' : 'سورة'} ${currentSurah.englishName}`;
+    } else if (type === 'doua') {
+        const doua = douasList.find(d => d.id.toString() === douaId);
+        if (doua) {
+            content = currentLanguage === 'fr' ? doua.titleFr :
+                currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
+        }
+    } else if (type === 'verse' && currentSurah) {
+        content = `${currentSurah.englishName} - ${currentLanguage === 'fr' ? 'Verset' :
+            currentLanguage === 'en' ? 'Verse' : 'الآية'} ${verseId}`;
+    } else {
+        content = title;
+    }
+
+    // Create reminder
+    const reminder = {
+        id: Date.now(),
+        title,
+        content,
+        datetime: datetime.toISOString(),
+        repeat,
+        type,
+        surahId,
+        douaId,
+        verseId
+    };
+
+    // Add to reminders list
+    reminders.push(reminder);
+    saveReminders();
+
+    // Close modal
+    reminderModal.classList.add('hidden');
+
+    // Show confirmation
+    showToast(translations[currentLanguage].reminderCreated);
+
+    // Request notification permission if needed
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+    }
+});
+
+// Cancel reminder button handler
+cancelReminderBtn.addEventListener('click', () => {
+    reminderModal.classList.add('hidden');
+});
+
+// Close when clicking outside modal
+reminderModal.addEventListener('click', (e) => {
+    if (e.target === reminderModal) {
+        reminderModal.classList.add('hidden');
+    }
+});
+
+// Copy share content button handler
+copyShareBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(shareContentTextarea.value)
+        .then(() => {
+            showToast(translations[currentLanguage].copied);
+        })
+        .catch(err => {
+            console.error('Error copying to clipboard:', err);
+        });
+});
+
+// Native share button handler
+nativeShareBtn.addEventListener('click', () => {
+    if (navigator.share) {
+        navigator.share({
+            title: shareModalTitle.textContent,
+            text: shareContentTextarea.value
+        })
+            .catch(err => {
+                console.error('Error sharing:', err);
+            });
+    }
+});
+
+// Close share modal
+closeShareBtn.addEventListener('click', () => {
+    shareModal.classList.add('hidden');
+});
+
+// Close when clicking outside share modal
+shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) {
+        shareModal.classList.add('hidden');
     }
 });
 
@@ -816,6 +1676,16 @@ languageBtns.forEach(btn => {
         // Reload Quran surahs if the quran tab is active
         if (document.getElementById('quran-content').classList.contains('active')) {
             fetchQuranSurahs();
+
+            // Reload current surah if any
+            if (currentSurah) {
+                fetchQuranSurah(currentSurah.number);
+            }
+        }
+
+        // Update douas list if douas tab is active
+        if (document.getElementById('douas-content').classList.contains('active')) {
+            updateDouasList();
         }
     });
 });
@@ -855,6 +1725,12 @@ function loadSavedPreferences() {
     } else {
         applyThemeColor('#5D5CDE'); // Default primary color
     }
+
+    // Load bookmarks
+    checkAndDisplayBookmark();
+
+    // Load reminders
+    loadReminders();
 }
 
 // Initialize app
@@ -862,6 +1738,9 @@ function loadSavedPreferences() {
     try {
         // Load saved preferences
         loadSavedPreferences();
+
+        // Initialize tabs
+        await fetchQuranSurahs();
 
         // Load prayer times
         await loadPrayerTimes();
