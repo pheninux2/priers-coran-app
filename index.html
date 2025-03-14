@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horaires des Prières et Coran</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#5D5CDE',
+            secondary: '#4caf50',
+            dark: '#181818',
+            light: '#FFFFFF'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
+    .arabic-text {
+      font-family: 'Amiri', serif;
+      direction: rtl;
+    }
+
+    .prayer-card {
+      transition: all 0.3s ease;
+    }
+
+    .prayer-card.current {
+      transform: scale(1.05);
+    }
+
+    .loader {
+      border-top-color: #5D5CDE;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Ajout des styles pour la navigation par onglets */
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Styles pour le sélecteur de thème */
+    .theme-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .theme-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: #5D5CDE;
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    /* Styles pour la signature d'amour */
+    .love-signature {
+      font-family: 'Dancing Script', cursive;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .love-signature:hover .initials {
+      transform: scale(1.1);
+    }
+
+    .initials {
+      font-size: 2.5rem;
+      line-height: 1;
+      transition: transform 0.3s ease;
+    }
+
+    .heart {
+      display: inline-block;
+      color: #e91e63;
+      animation: heartBeat 1.5s infinite;
+    }
+
+    @keyframes heartBeat {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.2); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.2); }
+      70% { transform: scale(1); }
+    }
+
+    .love-quote {
+      font-size: 1rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body class="font-sans bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-200">
+<div class="container mx-auto px-4 py-8 max-w-lg">
+  <header class="text-center mb-4">
+    <h1 class="text-3xl font-bold text-primary mb-2" id="app-title">Horaires des Prières</h1>
+    <p class="text-gray-600 dark:text-gray-400" id="date-display">Chargement de la date...</p>
+    <p class="text-gray-600 dark:text-gray-400" id="location-display">Localisation en cours...</p>
+  </header>
+
+  <!-- Signature d'amour H & A -->
+  <div class="love-signature text-center mb-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 shadow-sm">
+    <div class="initials text-primary">
+      H <span class="heart">&hearts;</span> A
+    </div>
+    <p class="love-quote text-gray-600 dark:text-gray-400">
+      "L'amour est le soleil de nos vies, illuminant chaque prière."
+    </p>
+  </div>
+
+  <!-- Navigation par onglets -->
+  <div class="flex mb-6 border-b border-gray-300 dark:border-gray-700">
+    <button id="tab-prayers" class="tab-btn py-2 px-4 font-medium border-b-2 border-primary text-primary">
+      <i class="fas fa-mosque mr-2"></i><span class="tab-text">Prières</span>
+    </button>
+    <button id="tab-quran"
+            class="tab-btn py-2 px-4 font-medium text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-primary hover:border-primary">
+      <i class="fas fa-book-quran mr-2"></i><span class="tab-text">Coran</span>
+    </button>
+    <button id="tab-settings"
+            class="tab-btn py-2 px-4 font-medium text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-primary hover:border-primary ml-auto">
+      <i class="fas fa-gear mr-2"></i><span class="tab-text">Paramètres</span>
+    </button>
+  </div>
+
+  <!-- Onglet des prières -->
+  <div id="prayers-content" class="tab-content active">
+    <div id="location-permission"
+         class="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 p-4 rounded-lg mb-6 hidden">
+      <p class="mb-3" id="location-permission-text">Veuillez autoriser l'accès à votre position pour obtenir les
+        horaires précis de prière.</p>
+      <button id="allow-location" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md">
+        <span id="allow-location-text">Autoriser la géolocalisation</span>
+      </button>
+    </div>
+
+    <div id="error-message"
+         class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg mb-6 hidden">
+      Une erreur s'est produite lors du chargement des horaires de prière.
+    </div>
+
+    <div id="loading" class="flex justify-center my-12">
+      <div class="loader w-12 h-12 border-4 border-gray-300 dark:border-gray-700 rounded-full"></div>
+    </div>
+
+    <div id="prayer-times" class="grid gap-4 hidden">
+      <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold text-primary" id="next-prayer-title">Prochaine prière</h2>
+          <span id="countdown" class="text-lg font-bold"></span>
+        </div>
+        <div id="next-prayer" class="text-2xl font-bold"></div>
+      </div>
+
+      <div id="fajr"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Fajr</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Prière de l'aube</p>
+        </div>
+        <div class="text-xl" id="fajr-time">--:--</div>
+      </div>
+
+      <div id="sunrise"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Chourouk</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Lever du soleil</p>
+        </div>
+        <div class="text-xl" id="sunrise-time">--:--</div>
+      </div>
+
+      <div id="dhuhr"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Dhuhr</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Prière de midi</p>
+        </div>
+        <div class="text-xl" id="dhuhr-time">--:--</div>
+      </div>
+
+      <div id="asr"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Asr</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Prière de l'après-midi</p>
+        </div>
+        <div class="text-xl" id="asr-time">--:--</div>
+      </div>
+
+      <div id="maghrib"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Maghrib</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Prière du coucher du
+            soleil</p>
+        </div>
+        <div class="text-xl" id="maghrib-time">--:--</div>
+      </div>
+
+      <div id="isha"
+           class="prayer-card bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 flex justify-between items-center">
+        <div>
+          <h3 class="font-semibold prayer-name">Isha</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400 prayer-description">Prière de la nuit</p>
+        </div>
+        <div class="text-xl" id="isha-time">--:--</div>
+      </div>
+    </div>
+
+    <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+      <p id="calculation-info">Les horaires peuvent légèrement varier selon les méthodes de calcul.</p>
+      <div class="mt-3">
+        <label for="calculation-method" class="block mb-2" id="calculation-method-label">Méthode de
+          calcul:</label>
+        <select id="calculation-method"
+                class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base">
+          <option value="2">ISNA (Amérique du Nord)</option>
+          <option value="3">MWL (Ligue Islamique Mondiale)</option>
+          <option value="4">Université Oumm al-Qura (Mecque)</option>
+          <option value="5">Égyptienne</option>
+          <option value="1">Université Islamique de Karachi</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onglet du Coran -->
+  <div id="quran-content" class="tab-content">
+    <div class="mb-6">
+      <label for="surah-select" class="block mb-2 font-medium" id="select-surah-label">Sélectionnez une
+        sourate:</label>
+      <div class="flex gap-2">
+        <select id="surah-select"
+                class="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base">
+          <option value="" disabled selected id="loading-surahs">Chargement des sourates...</option>
+        </select>
+        <button id="load-surah" class="bg-primary text-white px-4 py-2 rounded-md">
+          <i class="fas fa-book-open mr-2"></i><span id="load-surah-text">Lire</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="quran-loading" class="flex justify-center my-12 hidden">
+      <div class="loader w-12 h-12 border-4 border-gray-300 dark:border-gray-700 rounded-full"></div>
+    </div>
+
+    <div id="quran-error"
+         class="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg mb-6 hidden">
+      <span id="quran-error-text">Une erreur s'est produite lors du chargement du Coran.</span>
+    </div>
+
+    <div id="surah-container" class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 hidden">
+      <div id="surah-header" class="text-center mb-6">
+        <h2 id="surah-title" class="text-2xl font-bold text-primary mb-2"></h2>
+        <div id="surah-info" class="text-sm text-gray-600 dark:text-gray-400"></div>
+      </div>
+      <div id="bismillah" class="text-center mb-6 text-xl arabic-text"></div>
+      <div id="verses" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Onglet des paramètres -->
+  <div id="settings-content" class="tab-content">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold mb-4 text-primary" id="settings-title">Paramètres</h2>
+
+      <!-- Sélection de la langue -->
+      <div class="mb-6">
+        <h3 class="font-medium mb-2" id="language-title">Langue</h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="language-btn px-4 py-2 rounded-md border-2 border-primary bg-primary text-white"
+                  data-lang="fr">
+            Français
+          </button>
+          <button class="language-btn px-4 py-2 rounded-md border-2 border-gray-300 dark:border-gray-700"
+                  data-lang="en">
+            English
+          </button>
+          <button class="language-btn px-4 py-2 rounded-md border-2 border-gray-300 dark:border-gray-700 arabic-text"
+                  data-lang="ar">
+            العربية
+          </button>
+        </div>
+      </div>
+
+      <!-- Sélection du thème -->
+      <div class="mb-6">
+        <h3 class="font-medium mb-2" id="theme-title">Thème</h3>
+        <div class="flex items-center">
+          <span class="mr-2"><i class="fas fa-sun"></i></span>
+          <label class="theme-switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider"></span>
+          </label>
+          <span class="ml-2"><i class="fas fa-moon"></i></span>
+        </div>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2" id="theme-description">
+          Basculer entre les thèmes clair et sombre
+        </p>
+      </div>
+
+      <!-- Sélection de couleur du thème -->
+      <div>
+        <h3 class="font-medium mb-2" id="color-title">Couleur du thème</h3>
+        <div class="flex flex-wrap gap-2">
+          <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
+                  style="background-color: #5D5CDE;" data-color="#5D5CDE"></button>
+          <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
+                  style="background-color: #4caf50;" data-color="#4caf50"></button>
+          <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
+                  style="background-color: #2196f3;" data-color="#2196f3"></button>
+          <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
+                  style="background-color: #ff9800;" data-color="#ff9800"></button>
+          <button class="color-btn w-10 h-10 rounded-full border-2 border-gray-300 dark:border-gray-700"
+                  style="background-color: #e91e63;" data-color="#e91e63"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="priers.js"></script>
+</body>
+</html>
