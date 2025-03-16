@@ -1,3 +1,55 @@
+
+// Fonction qui s'exécute quand le document est chargé
+document.addEventListener("DOMContentLoaded", function() {
+    // Vérifier si l'application native Android est disponible
+    if (window.AndroidInterface) {
+        console.log("Application Android détectée");
+
+        // Exemple: Vous pouvez créer des fonctions qui utilisent localStorage et les notifications
+
+        // Fonction pour envoyer une notification immédiate
+        window.sendNotification = function(title, message) {
+            // Récupérer les données depuis localStorage si nécessaire
+            if (!title) title = localStorage.getItem('notifTitle') || "Notification";
+            if (!message) message = localStorage.getItem('notifMessage') || "Message de notification";
+
+            // Appeler l'interface Android
+            window.AndroidInterface.showNotificationNow(title, message);
+        };
+
+        // Fonction pour planifier une notification
+        window.scheduleNotification = function(title, message, delayMinutes) {
+            if (!title) title = localStorage.getItem('notifTitle') || "Notification planifiée";
+            if (!message) message = localStorage.getItem('notifMessage') || "Message planifié";
+            if (!delayMinutes) delayMinutes = 1;
+
+            const timeInMillis = Date.now() + (delayMinutes * 60 * 1000);
+
+            // Sauvegarder dans localStorage si nécessaire
+            localStorage.setItem('scheduledNotifTitle', title);
+            localStorage.setItem('scheduledNotifMessage', message);
+            localStorage.setItem('scheduledNotifTime', timeInMillis);
+
+            // Appeler l'interface Android
+            window.AndroidInterface.scheduleNotification(title, message, timeInMillis);
+        };
+
+        // Vous pouvez ajouter un bouton de test dans votre interface si vous le souhaitez
+        const testButton = document.createElement('button');
+        testButton.innerText = 'Tester Notification';
+        testButton.style.position = 'fixed';
+        testButton.style.bottom = '20px';
+        testButton.style.right = '20px';
+        testButton.style.zIndex = '9999';
+        testButton.addEventListener('click', function() {
+            window.sendNotification("Test depuis le web", "Ceci est un test de notification!");
+        });
+        document.body.appendChild(testButton);
+    } else {
+        console.log("Application Android non détectée - s'exécute dans un navigateur normal");
+    }
+});
+
 // Translations
 const translations = {
     fr: {
