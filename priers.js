@@ -1,55 +1,3 @@
-
-// Fonction qui s'exécute quand le document est chargé
-document.addEventListener("DOMContentLoaded", function() {
-    // Vérifier si l'application native Android est disponible
-    if (window.AndroidInterface) {
-        console.log("Application Android détectée");
-
-        // Exemple: Vous pouvez créer des fonctions qui utilisent localStorage et les notifications
-
-        // Fonction pour envoyer une notification immédiate
-        window.sendNotification = function(title, message) {
-            // Récupérer les données depuis localStorage si nécessaire
-            if (!title) title = localStorage.getItem('notifTitle') || "Notification";
-            if (!message) message = localStorage.getItem('notifMessage') || "Message de notification";
-
-            // Appeler l'interface Android
-            window.AndroidInterface.showNotificationNow(title, message);
-        };
-
-        // Fonction pour planifier une notification
-        window.scheduleNotification = function(title, message, delayMinutes) {
-            if (!title) title = localStorage.getItem('notifTitle') || "Notification planifiée";
-            if (!message) message = localStorage.getItem('notifMessage') || "Message planifié";
-            if (!delayMinutes) delayMinutes = 1;
-
-            const timeInMillis = Date.now() + (delayMinutes * 60 * 1000);
-
-            // Sauvegarder dans localStorage si nécessaire
-            localStorage.setItem('scheduledNotifTitle', title);
-            localStorage.setItem('scheduledNotifMessage', message);
-            localStorage.setItem('scheduledNotifTime', timeInMillis);
-
-            // Appeler l'interface Android
-            window.AndroidInterface.scheduleNotification(title, message, timeInMillis);
-        };
-
-        // Vous pouvez ajouter un bouton de test dans votre interface si vous le souhaitez
-        const testButton = document.createElement('button');
-        testButton.innerText = 'Tester Notification';
-        testButton.style.position = 'fixed';
-        testButton.style.bottom = '20px';
-        testButton.style.right = '20px';
-        testButton.style.zIndex = '9999';
-        testButton.addEventListener('click', function() {
-            window.sendNotification("Test depuis le web", "Ceci est un test de notification!");
-        });
-        document.body.appendChild(testButton);
-    } else {
-        console.log("Application Android non détectée - s'exécute dans un navigateur normal");
-    }
-});
-
 // Translations
 const translations = {
     fr: {
@@ -1801,3 +1749,119 @@ function loadSavedPreferences() {
         console.error('Initialization error:', error);
     }
 })();
+
+// Intégration des notifications natives Android
+// Cette fonction s'exécute après le chargement du document
+// mais aussi après l'initialisation de l'application
+function setupAndroidNotifications() {
+    // Vérifier si l'application native Android est disponible
+    if (window.AndroidInterface) {
+        console.log("Application Android détectée - Intégration des notifications natives activée");
+
+        // Remplacer la fonction checkUpcomingReminders pour utiliser les notifications natives
+        window.checkUpcomingReminders = function() {
+            const now = new Date();
+
+            reminders.forEach((reminder, index) => {
+                const reminderTime = new Date(reminder.datetime);
+
+                // Si le rappel est dû
+                if (reminderTime <= now) {
+                    // Envoyer une notification native via l'interface Android
+                    window.AndroidInterface.showNotificationNow(reminder.title, reminder.content);
+
+                    // Si c'est un rappel récurrent, le mettre à jour pour demain
+                    if (reminder.repeat) {
+                        const tomorrow = new Date(reminderTime);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        reminders[index].datetime = tomorrow.toISOString();
+                    } else {
+                        // Supprimer les rappels ponctuels terminés
+                        reminders.splice(index, 1);
+                    }
+
+                    saveReminders();
+                }
+            });
+
+            // Vérifier à nouveau dans une minute
+            setTimeout(checkUpcomingReminders, 60000);
+        };
+
+        // Remplacer la fonction saveReminders pour planifier les notifications natives
+        const originalSaveReminders = saveReminders;
+        window.saveReminders = function() {
+            // Sauvegarder les rappels dans localStorage comme avant
+            originalSaveReminders();
+
+            // Planifier les notifications dans le système Android
+            reminders.forEach(reminder => {
+                const reminderTime = new Date(reminder.datetime).getTime();
+
+                // Ne planifier que les notifications futures
+                if (reminderTime > Date.now()) {
+                    window.AndroidInterface.scheduleNotification(
+                        reminder.title,
+                        reminder.content,
+                        reminderTime
+                    );
+                }
+            });
+        };
+
+        // Intercepter les demandes de Notification web
+        if ('Notification' in window) {
+            const originalNotification = window.Notification;
+            window.Notification = function(title, options) {
+                // Utiliser directement la notification native Android
+                window.AndroidInterface.showNotificationNow(title, options.body || "");
+
+                // Simuler l'API Notification pour la compatibilité
+                return {
+                    onclick: function() {},
+                    close: function() {}
+                };
+            };
+
+            // Simuler la permission toujours accordée
+            window.Notification.permission = "granted";
+            window.Notification.requestPermission = function(callback) {
+                if (callback) callback("granted");
+                return Promise.resolve("granted");
+            };
+        }
+
+        // Synchronisation des rappels existants
+        function syncExistingReminders() {
+            // Synchroniser tous les rappels existants avec le système Android
+            reminders.forEach(reminder => {
+                const reminderTime = new Date(reminder.datetime).getTime();
+
+                if (reminderTime > Date.now()) {
+                    window.AndroidInterface.scheduleNotification(
+                        reminder.title,
+                        reminder.content,
+                        reminderTime
+                    );
+                }
+            });
+        }
+
+        // Synchroniser les rappels existants au démarrage
+        syncExistingReminders();
+    }
+}
+
+// Ajouter la fonction d'initialisation à la fin du code existant,
+// juste après la fonction init() pour s'assurer que tout est chargé
+document.addEventListener("DOMContentLoaded", function() {
+    // Le code original d'initialisation s'exécute d'abord
+
+    // Puis notre fonction de configuration des notifications Android
+    setTimeout(setupAndroidNotifications, 1000); // Délai pour s'assurer que tout est chargé
+});
+
+// Également appeler la fonction au cas où DOMContentLoaded s'est déjà produit
+if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(setupAndroidNotifications, 1000);
+}
