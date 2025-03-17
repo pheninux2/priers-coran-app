@@ -1668,7 +1668,9 @@ saveReminderBtn.addEventListener('click', () => {
                 window.AndroidInterface.scheduleNotification(
                     title,
                     enhancedContent,
-                    reminderTime
+                    reminderTime,
+                    type,
+                    navigationId
                 );
             } catch (error) {
                 console.error("Erreur lors de la planification de la notification:", error);
@@ -1984,7 +1986,7 @@ function navigateToContent(type, id) {
             const douaElement = document.querySelector(`.doua-card[data-id="${douaId}"]`);
             if (douaElement) {
                 // Faire défiler jusqu'à la doua
-                douaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                douaElement.scrollIntoView({behavior: 'smooth', block: 'center'});
                 // Mettre en évidence la doua
                 douaElement.classList.add('bg-primary/10');
                 setTimeout(() => {
