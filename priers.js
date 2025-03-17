@@ -506,7 +506,7 @@ function updateRemindersDisplay() {
                 currentLanguage === 'en' ? 'en-US' : 'ar-SA');
             const formattedTime = date.toLocaleTimeString(currentLanguage === 'fr' ? 'fr-FR' :
                     currentLanguage === 'en' ? 'en-US' : 'ar-SA',
-                { hour: '2-digit', minute: '2-digit' });
+                {hour: '2-digit', minute: '2-digit'});
 
             // Create reminder info
             const reminderInfo = document.createElement('div');
@@ -561,7 +561,7 @@ function checkUpcomingReminders() {
                     icon: 'https://i.imgur.com/favicon.ico'
                 });
 
-                notification.onclick = function() {
+                notification.onclick = function () {
                     window.focus();
                     this.close();
                 };
@@ -586,8 +586,9 @@ function checkUpcomingReminders() {
 }
 
 // Create a reminder for reading
+// Mise à jour de la fonction createReading pour inclure les informations de navigation
 function createReading(type, id, title, content) {
-    // Reset and prepare modal
+    // Reset et préparer le modal comme avant
     reminderTitleInput.value = title;
 
     const today = new Date();
@@ -599,12 +600,23 @@ function createReading(type, id, title, content) {
 
     reminderRepeatCheckbox.checked = false;
 
+    // Stocker les informations de navigation
+    let navigationType = type;
+    let navigationId = id;
+
+    // Si c'est un verset, formater correctement l'ID
+    if (type === 'verse' && currentSurah) {
+        navigationId = `${currentSurah.number}:${id}`;
+    }
+
+    // Stocker ces valeurs pour les utiliser dans saveReminderBtn.addEventListener
+    reminderTypeInput.value = navigationType;
+
+    // Stocker aussi les anciennes valeurs pour la compatibilité
     reminderSurahIdInput.value = '';
     reminderDouaIdInput.value = '';
     reminderVerseIdInput.value = '';
 
-    // Set appropriate values based on type
-    reminderTypeInput.value = type;
     if (type === 'surah') {
         reminderSurahIdInput.value = id;
     } else if (type === 'doua') {
@@ -614,7 +626,10 @@ function createReading(type, id, title, content) {
         reminderSurahIdInput.value = currentSurah?.number || '';
     }
 
-    // Show modal
+    // Ajouter un attribut de données personnalisé pour stocker l'ID de navigation
+    reminderModal.dataset.navigationId = navigationId;
+
+    // Afficher le modal
     reminderModal.classList.remove('hidden');
 }
 
@@ -748,10 +763,17 @@ function formatDate(date) {
 
     let locale;
     switch (currentLanguage) {
-        case 'fr': locale = 'fr-FR'; break;
-        case 'en': locale = 'en-US'; break;
-        case 'ar': locale = 'ar-SA'; break;
-        default: locale = 'fr-FR';
+        case 'fr':
+            locale = 'fr-FR';
+            break;
+        case 'en':
+            locale = 'en-US';
+            break;
+        case 'ar':
+            locale = 'ar-SA';
+            break;
+        default:
+            locale = 'fr-FR';
     }
 
     return date.toLocaleDateString(locale, options);
@@ -913,13 +935,26 @@ function updateNextPrayerDisplay() {
     // Get prayer name in current language
     let nextName;
     switch (nextPrayer.name) {
-        case 'Fajr': nextName = translations[currentLanguage].fajrName; break;
-        case 'Sunrise': nextName = translations[currentLanguage].sunriseName; break;
-        case 'Dhuhr': nextName = translations[currentLanguage].dhuhrName; break;
-        case 'Asr': nextName = translations[currentLanguage].asrName; break;
-        case 'Maghrib': nextName = translations[currentLanguage].maghribName; break;
-        case 'Isha': nextName = translations[currentLanguage].ishaName; break;
-        default: nextName = nextPrayer.name;
+        case 'Fajr':
+            nextName = translations[currentLanguage].fajrName;
+            break;
+        case 'Sunrise':
+            nextName = translations[currentLanguage].sunriseName;
+            break;
+        case 'Dhuhr':
+            nextName = translations[currentLanguage].dhuhrName;
+            break;
+        case 'Asr':
+            nextName = translations[currentLanguage].asrName;
+            break;
+        case 'Maghrib':
+            nextName = translations[currentLanguage].maghribName;
+            break;
+        case 'Isha':
+            nextName = translations[currentLanguage].ishaName;
+            break;
+        default:
+            nextName = nextPrayer.name;
     }
 
     // Get tomorrow text
@@ -1020,7 +1055,7 @@ function getLocation() {
                 locationPermissionEl.classList.remove('hidden');
                 reject(error);
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            {enableHighAccuracy: true, timeout: 10000, maximumAge: 60000}
         );
     });
 }
@@ -1355,7 +1390,7 @@ async function fetchQuranSurah(surahNumber, scrollToVerse = null) {
                 setTimeout(() => {
                     const verseElement = document.getElementById(scrollToVerse);
                     if (verseElement) {
-                        verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        verseElement.scrollIntoView({behavior: 'smooth', block: 'center'});
                         verseElement.classList.add('bg-primary/5');
                         setTimeout(() => {
                             verseElement.classList.remove('bg-primary/5');
@@ -1524,7 +1559,8 @@ addReminderDoua.addEventListener('click', () => {
     createReading('general', 0, title, content);
 });
 
-// Save reminder button handler
+
+// Écouteur d'événements modifié pour saveReminderBtn
 saveReminderBtn.addEventListener('click', () => {
     const title = reminderTitleInput.value.trim();
     if (!title) {
@@ -1557,6 +1593,16 @@ saveReminderBtn.addEventListener('click', () => {
     const douaId = reminderDouaIdInput.value;
     const verseId = reminderVerseIdInput.value;
 
+    // Créer l'ID de navigation selon le type
+    let navigationId = null;
+    if (type === 'surah') {
+        navigationId = surahId;
+    } else if (type === 'doua') {
+        navigationId = douaId;
+    } else if (type === 'verse' && currentSurah) {
+        navigationId = `${currentSurah.number}:${verseId}`;
+    }
+
     // Get content based on type
     let content = '';
     if (type === 'surah' && currentSurah) {
@@ -1585,7 +1631,8 @@ saveReminderBtn.addEventListener('click', () => {
         type,
         surahId,
         douaId,
-        verseId
+        verseId,
+        navigationId // Ajouter l'ID de navigation
     };
 
     // Add to reminders list
@@ -1602,7 +1649,22 @@ saveReminderBtn.addEventListener('click', () => {
     if ('Notification' in window && Notification.permission !== 'granted') {
         Notification.requestPermission();
     }
+
+    // Planifier la notification avec les données de navigation
+    if (window.AndroidInterface) {
+        const reminderTime = datetime.getTime();
+        if (reminderTime > Date.now()) {
+            window.AndroidInterface.scheduleNotification(
+                title,
+                content,
+                reminderTime,
+                type,  // Type de contenu (surah, verse, doua)
+                navigationId  // ID pour la navigation
+            );
+        }
+    }
 });
+
 
 // Cancel reminder button handler
 cancelReminderBtn.addEventListener('click', () => {
@@ -1759,7 +1821,7 @@ function setupAndroidNotifications() {
         console.log("Application Android détectée - Intégration des notifications natives activée");
 
         // Remplacer la fonction checkUpcomingReminders pour utiliser les notifications natives
-        window.checkUpcomingReminders = function() {
+        window.checkUpcomingReminders = function () {
             const now = new Date();
 
             reminders.forEach((reminder, index) => {
@@ -1790,7 +1852,7 @@ function setupAndroidNotifications() {
 
         // Remplacer la fonction saveReminders pour planifier les notifications natives
         const originalSaveReminders = saveReminders;
-        window.saveReminders = function() {
+        window.saveReminders = function () {
             // Sauvegarder les rappels dans localStorage comme avant
             originalSaveReminders();
 
@@ -1812,20 +1874,22 @@ function setupAndroidNotifications() {
         // Intercepter les demandes de Notification web
         if ('Notification' in window) {
             const originalNotification = window.Notification;
-            window.Notification = function(title, options) {
+            window.Notification = function (title, options) {
                 // Utiliser directement la notification native Android
                 window.AndroidInterface.showNotificationNow(title, options.body || "");
 
                 // Simuler l'API Notification pour la compatibilité
                 return {
-                    onclick: function() {},
-                    close: function() {}
+                    onclick: function () {
+                    },
+                    close: function () {
+                    }
                 };
             };
 
             // Simuler la permission toujours accordée
             window.Notification.permission = "granted";
-            window.Notification.requestPermission = function(callback) {
+            window.Notification.requestPermission = function (callback) {
                 if (callback) callback("granted");
                 return Promise.resolve("granted");
             };
@@ -1854,7 +1918,7 @@ function setupAndroidNotifications() {
 
 // Ajouter la fonction d'initialisation à la fin du code existant,
 // juste après la fonction init() pour s'assurer que tout est chargé
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     // Le code original d'initialisation s'exécute d'abord
 
     // Puis notre fonction de configuration des notifications Android
@@ -1864,4 +1928,57 @@ document.addEventListener("DOMContentLoaded", function() {
 // Également appeler la fonction au cas où DOMContentLoaded s'est déjà produit
 if (document.readyState === "complete" || document.readyState === "interactive") {
     setTimeout(setupAndroidNotifications, 1000);
+}
+
+// Ajouter cette fonction à votre code JavaScript priers.js
+function navigateToContent(type, id) {
+    console.log("Navigation vers:", type, id);
+
+    // Selon le type, naviguez vers le contenu approprié
+    if (type === 'surah') {
+        // Activer l'onglet Coran
+        document.getElementById('tab-quran').click();
+
+        // Sélectionner la sourate et la charger
+        const surahNumber = id;
+        if (surahSelect) {
+            surahSelect.value = surahNumber;
+            // Attendre un peu pour s'assurer que la valeur est bien définie
+            setTimeout(() => {
+                fetchQuranSurah(surahNumber);
+            }, 500);
+        }
+    } else if (type === 'verse') {
+        // Activer l'onglet Coran
+        document.getElementById('tab-quran').click();
+
+        // Les données sont au format 'surahNumber:verseNumber'
+        const [surahNumber, verseNumber] = id.split(':');
+
+        if (surahSelect) {
+            surahSelect.value = surahNumber;
+            // Charger la sourate puis défiler jusqu'au verset
+            setTimeout(() => {
+                fetchQuranSurah(surahNumber, `verse-${verseNumber}`);
+            }, 500);
+        }
+    } else if (type === 'doua') {
+        // Activer l'onglet Douas
+        document.getElementById('tab-douas').click();
+
+        // Chercher la doua par ID
+        const douaId = parseInt(id);
+        setTimeout(() => {
+            const douaElement = document.querySelector(`.doua-card[data-id="${douaId}"]`);
+            if (douaElement) {
+                // Faire défiler jusqu'à la doua
+                douaElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+                // Mettre en évidence la doua
+                douaElement.classList.add('bg-primary/10');
+                setTimeout(() => {
+                    douaElement.classList.remove('bg-primary/10');
+                }, 2000);
+            }
+        }, 500);
+    }
 }
