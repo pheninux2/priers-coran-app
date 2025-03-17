@@ -1621,7 +1621,7 @@ saveReminderBtn.addEventListener('click', () => {
         content = title;
     }
 
-    // Create reminder
+    // Create reminder with navigation info
     const reminder = {
         id: Date.now(),
         title,
@@ -1632,7 +1632,7 @@ saveReminderBtn.addEventListener('click', () => {
         surahId,
         douaId,
         verseId,
-        navigationId // Ajouter l'ID de navigation
+        navigationId // Ajouter l'ID de navigation pour l'usage interne
     };
 
     // Add to reminders list
@@ -1650,16 +1650,22 @@ saveReminderBtn.addEventListener('click', () => {
         Notification.requestPermission();
     }
 
-    // Planifier la notification avec les données de navigation
+    // Planifier la notification avec l'interface existante (3 paramètres uniquement)
     if (window.AndroidInterface) {
         const reminderTime = datetime.getTime();
         if (reminderTime > Date.now()) {
+            // Modifier le message pour inclure les informations de navigation
+            let enhancedMessage = message;
+            if (navigationId) {
+                // Ajouter les informations de navigation dans le JSON à la fin du message
+                enhancedMessage = `${content}\n\n##NAV_DATA##${JSON.stringify({type, id: navigationId})}`;
+            }
+
+            // Appeler la méthode avec seulement les 3 paramètres existants
             window.AndroidInterface.scheduleNotification(
                 title,
-                content,
-                reminderTime,
-                type,  // Type de contenu (surah, verse, doua)
-                navigationId  // ID pour la navigation
+                enhancedMessage,
+                reminderTime
             );
         }
     }
@@ -1972,7 +1978,7 @@ function navigateToContent(type, id) {
             const douaElement = document.querySelector(`.doua-card[data-id="${douaId}"]`);
             if (douaElement) {
                 // Faire défiler jusqu'à la doua
-                douaElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+                douaElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // Mettre en évidence la doua
                 douaElement.classList.add('bg-primary/10');
                 setTimeout(() => {
