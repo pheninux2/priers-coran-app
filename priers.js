@@ -1654,19 +1654,25 @@ saveReminderBtn.addEventListener('click', () => {
     if (window.AndroidInterface) {
         const reminderTime = datetime.getTime();
         if (reminderTime > Date.now()) {
-            // Modifier le message pour inclure les informations de navigation
-            let enhancedMessage = message;
-            if (navigationId) {
-                // Ajouter les informations de navigation dans le JSON à la fin du message
-                enhancedMessage = `${content}\n\n##NAV_DATA##${JSON.stringify({type, id: navigationId})}`;
-            }
+            try {
+                // Ici nous utilisons 'content' au lieu de 'message' qui n'existe pas
+                let enhancedContent = content;
 
-            // Appeler la méthode avec seulement les 3 paramètres existants
-            window.AndroidInterface.scheduleNotification(
-                title,
-                enhancedMessage,
-                reminderTime
-            );
+                // Si nous avons un ID de navigation, ajoutons-le au message
+                if (navigationId) {
+                    // Ajouter un marqueur spécial que le code Java pourra détecter
+                    enhancedContent = `${content}\n\n##NAV_DATA##${JSON.stringify({type, id: navigationId})}`;
+                }
+
+                // Utiliser la méthode avec seulement les 3 paramètres originaux
+                window.AndroidInterface.scheduleNotification(
+                    title,
+                    enhancedContent,
+                    reminderTime
+                );
+            } catch (error) {
+                console.error("Erreur lors de la planification de la notification:", error);
+            }
         }
     }
 });
