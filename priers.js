@@ -1879,7 +1879,9 @@ function setupAndroidNotifications() {
                     window.AndroidInterface.scheduleNotification(
                         reminder.title,
                         reminder.content,
-                        reminderTime
+                        reminderTime,
+                        reminder.type,
+                        reminder.navigationId
                     );
                 }
             });
@@ -1919,7 +1921,9 @@ function setupAndroidNotifications() {
                     window.AndroidInterface.scheduleNotification(
                         reminder.title,
                         reminder.content,
-                        reminderTime
+                        reminderTime,
+                        reminder.type,
+                        reminder.navigationId
                     );
                 }
             });
