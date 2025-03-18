@@ -1650,24 +1650,14 @@ saveReminderBtn.addEventListener('click', () => {
         Notification.requestPermission();
     }
 
-    // Planifier la notification avec l'interface existante (3 paramètres uniquement)
+    // Planifier la notification avec l'interface Android
     if (window.AndroidInterface) {
         const reminderTime = datetime.getTime();
         if (reminderTime > Date.now()) {
             try {
-                // Ici nous utilisons 'content' au lieu de 'message' qui n'existe pas
-                let enhancedContent = content;
-
-                // Si nous avons un ID de navigation, ajoutons-le au message
-                if (navigationId) {
-                    // Ajouter un marqueur spécial que le code Java pourra détecter
-                    enhancedContent = `${content}\n\n##NAV_DATA##${JSON.stringify({type, id: navigationId})}`;
-                }
-
-                // Utiliser la méthode avec seulement les 3 paramètres originaux
                 window.AndroidInterface.scheduleNotification(
                     title,
-                    enhancedContent,
+                    content,
                     reminderTime,
                     type,
                     navigationId
