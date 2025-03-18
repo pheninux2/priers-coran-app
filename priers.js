@@ -1865,27 +1865,27 @@ function setupAndroidNotifications() {
         };
 
         // Remplacer la fonction saveReminders pour planifier les notifications natives
-        const originalSaveReminders = saveReminders;
-        window.saveReminders = function () {
-            // Sauvegarder les rappels dans localStorage comme avant
-            originalSaveReminders();
-
-            // Planifier les notifications dans le système Android
-            reminders.forEach(reminder => {
-                const reminderTime = new Date(reminder.datetime).getTime();
-
-                // Ne planifier que les notifications futures
-                if (reminderTime > Date.now()) {
-                    window.AndroidInterface.scheduleNotification(
-                        reminder.title,
-                        reminder.content,
-                        reminderTime,
-                        reminder.type,
-                        reminder.navigationId
-                    );
-                }
-            });
-        };
+        // const originalSaveReminders = saveReminders;
+        // window.saveReminders = function () {
+        //     // Sauvegarder les rappels dans localStorage comme avant
+        //     originalSaveReminders();
+        //
+        //     // Planifier les notifications dans le système Android
+        //     reminders.forEach(reminder => {
+        //         const reminderTime = new Date(reminder.datetime).getTime();
+        //
+        //         // Ne planifier que les notifications futures
+        //         if (reminderTime > Date.now()) {
+        //             window.AndroidInterface.scheduleNotification(
+        //                 reminder.title,
+        //                 reminder.content,
+        //                 reminderTime,
+        //                 reminder.type,
+        //                 reminder.navigationId
+        //             );
+        //         }
+        //     });
+        // };
 
         // Intercepter les demandes de Notification web
         if ('Notification' in window) {
