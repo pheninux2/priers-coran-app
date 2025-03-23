@@ -17,10 +17,13 @@
 
 // Essayez ceci
 const adhanPaths = {
-    adhan1: 'https://www.islamcan.com/audio/adhan/azan3.mp3', // URL en ligne
+    adhan1: 'https://www.islamcan.com/audio/adhan/azan1.mp3', // URL en ligne
     adhan2: 'https://www.islamcan.com/audio/adhan/azan3.mp3', // URL en ligne
     beep: './beep.mp3'
 };
+
+// Variable pour suivre si l'arrêt est volontaire ou non
+let isManualStop = false;
 
 // Variables globales de l'application
 let packageName = '';
@@ -1797,106 +1800,192 @@ function saveAdhanSettings() {
 
 // Fonction pour prévisualiser l'adhan avec gestion correcte de la promesse
 // Modifiez cette partie de la fonction previewAdhan
+// Variable globale pour garder une référence à l'audio en cours
+let currentAdhanAudio = null;
+
 function previewAdhan(prayer) {
-    // Référence à l'élément audio
-    const adhanPreview = document.getElementById('adhan-preview');
-    if (!adhanPreview) {
-        console.error('Élément audio non trouvé');
-        return;
-    }
-
-    // Trouver le bouton qui a été cliqué
+    // Référence au bouton
     const previewBtn = document.getElementById(`preview-${prayer.toLowerCase()}`);
+    if (!previewBtn) return;
 
-    // Vérifier si on est déjà en train de jouer
+    // Bloquer les clics multiples
+    if (previewBtn.disabled) return;
+    previewBtn.disabled = true;
+    setTimeout(() => { previewBtn.disabled = false; }, 500);
+
+    // Si on est en train de jouer, arrêter complètement
     if (previewBtn.dataset.playing === "true") {
-        console.log('Tentative d\'arrêt de la lecture...');
+        console.log('Arrêt forcé de la lecture');
 
-        // Mettre à jour l'UI immédiatement
+        // Indiquer que c'est un arrêt volontaire pour éviter de montrer l'erreur
+        isManualStop = true;
+
+        // Mettre à jour l'interface
         previewBtn.dataset.playing = "false";
         previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
 
-        // Arrêter la lecture en sécurité
-        if (adhanPlayPromise) {
-            adhanPlayPromise
-                .then(() => {
-                    console.log('Lecture arrêtée avec succès');
-                    adhanPreview.pause();
-                    adhanPreview.currentTime = 0;
-                })
-                .catch(err => {
-                    console.log('Erreur lors de l\'arrêt: ' + err.message);
-                    // Pas besoin d'arrêter si la lecture n'a jamais commencé
-                });
-        } else {
-            // Si pas de promesse active, essayer quand même d'arrêter
+        // Arrêter et détruire l'audio en cours
+        if (currentAdhanAudio) {
             try {
-                adhanPreview.pause();
-                adhanPreview.currentTime = 0;
+                currentAdhanAudio.pause();
+                currentAdhanAudio.src = '';
+                currentAdhanAudio.remove(); // Retirer du DOM
+                currentAdhanAudio = null;
             } catch (e) {
-                console.error('Erreur lors de l\'arrêt forcé:', e);
+                console.error('Erreur lors de la suppression audio:', e);
             }
         }
 
-        adhanPlayPromise = null;
+        // Réinitialiser le flag après un court délai
+        setTimeout(() => {
+            isManualStop = false;
+        }, 300);
+
         return;
     }
 
-    // Préparer la lecture
+    // SINON: Démarrer un tout nouveau lecteur
+    console.log('Création d\'un nouveau lecteur audio');
+    isManualStop = false;
+
+    // Mettre à jour l'interface pendant le chargement
+    previewBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">Chargement...</span>`;
+
+    // Obtenir l'URL de l'audio
     const adhanType = adhanSettings[prayer];
     const adhanUrl = adhanPaths[adhanType];
 
-    console.log(`Tentative de lecture du fichier: ${adhanUrl}`);
+    // Créer un nouveau lecteur audio
+    const newAudio = document.createElement('audio');
+    newAudio.style.display = 'none';
+    document.body.appendChild(newAudio);
 
-    // Mise à jour de l'UI avant la lecture
-    previewBtn.dataset.playing = "true";
-    previewBtn.innerHTML = `<i class="fas fa-stop mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].stop || 'Arrêter'}</span>`;
+    // Supprimer l'ancien lecteur si présent
+    if (currentAdhanAudio) {
+        try {
+            currentAdhanAudio.pause();
+            currentAdhanAudio.src = '';
+            currentAdhanAudio.remove();
+        } catch (e) {
+            console.error('Erreur nettoyage audio:', e);
+        }
+    }
 
-    // Précharger l'audio avec une nouvelle méthode
-    adhanPreview.src = adhanUrl;
-    adhanPreview.load(); // Force le préchargement
+    // Définir le nouvel élément comme actif
+    currentAdhanAudio = newAudio;
 
-    // Écouter les événements pour déboguer
-    adhanPreview.addEventListener('canplay', () => console.log('Audio can play now'), { once: true });
-    adhanPreview.addEventListener('error', (e) => console.error('Audio loading error:', e), { once: true });
+    // Gestionnaire de fin de lecture
+    newAudio.addEventListener('ended', function() {
+        console.log('Lecture terminée');
 
-    try {
-        // Tentative de lecture
-        adhanPlayPromise = adhanPreview.play();
+        // Mise à jour de l'interface
+        previewBtn.dataset.playing = "false";
+        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
 
-        if (adhanPlayPromise) {
-            adhanPlayPromise
-                .then(() => {
-                    console.log('Lecture démarrée avec succès');
-                })
-                .catch(error => {
-                    console.error('Échec de la lecture:', error.message);
+        // Nettoyage
+        if (currentAdhanAudio === newAudio) {
+            currentAdhanAudio = null;
+        }
 
-                    // Réinitialiser l'UI en cas d'erreur
+        // Retirer l'élément du DOM
+        setTimeout(() => {
+            newAudio.remove();
+        }, 100);
+    }, { once: true });
+
+    // Gestionnaire d'erreur - Ne montrer l'erreur que si ce n'est pas un arrêt volontaire
+    newAudio.addEventListener('error', function(e) {
+        console.error('Erreur de lecture:', e);
+
+        // Mise à jour de l'interface
+        previewBtn.dataset.playing = "false";
+        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+        // Afficher le message d'erreur UNIQUEMENT si ce n'est pas un arrêt manuel
+        if (!isManualStop) {
+            showToast('Erreur de lecture audio', true);
+        }
+
+        // Nettoyage
+        if (currentAdhanAudio === newAudio) {
+            currentAdhanAudio = null;
+        }
+
+        // Retirer l'élément du DOM
+        setTimeout(() => {
+            newAudio.remove();
+        }, 100);
+    }, { once: true });
+
+    // Commencer la lecture une fois prêt
+    newAudio.addEventListener('canplay', function() {
+        console.log('Audio prêt à jouer');
+
+        // Vérifier si l'utilisateur a déjà cliqué pour arrêter avant même que le chargement ne soit terminé
+        if (isManualStop) {
+            console.log('Chargement terminé mais arrêt demandé entre-temps');
+            newAudio.remove();
+            return;
+        }
+
+        // Démarrer la lecture
+        try {
+            const playPromise = newAudio.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('Lecture démarrée');
+
+                    // Vérifier à nouveau si on a demandé l'arrêt pendant que la promesse était en cours
+                    if (isManualStop) {
+                        newAudio.pause();
+                        newAudio.remove();
+                        return;
+                    }
+
+                    // Mise à jour interface en succès
+                    previewBtn.dataset.playing = "true";
+                    previewBtn.innerHTML = `<i class="fas fa-stop mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].stop || 'Arrêter'}</span>`;
+                }).catch(err => {
+                    // Ne pas afficher d'erreur si c'est un arrêt manuel
+                    if (isManualStop) return;
+
+                    console.error('Échec lecture:', err);
+
+                    // Mise à jour interface en échec
                     previewBtn.dataset.playing = "false";
                     previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
 
-                    // Notification visible
-                    showToast(`Erreur: Impossible de lire le fichier audio. ${error.message}`, true);
-
-                    adhanPlayPromise = null;
+                    // Nettoyage
+                    if (currentAdhanAudio === newAudio) {
+                        currentAdhanAudio = null;
+                    }
+                    newAudio.remove();
                 });
-        } else {
-            console.warn('play() n\'a pas retourné de promesse');
-        }
-    } catch (e) {
-        console.error('Exception lors de la lecture:', e);
-        previewBtn.dataset.playing = "false";
-        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
-    }
+            } else {
+                // Pour les navigateurs qui ne retournent pas de promesse
+                console.log('Lecture démarrée (sans promesse)');
+                previewBtn.dataset.playing = "true";
+                previewBtn.innerHTML = `<i class="fas fa-stop mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].stop || 'Arrêter'}</span>`;
+            }
+        } catch (err) {
+            // Ne pas afficher d'erreur si c'est un arrêt manuel
+            if (isManualStop) return;
 
-    // Réinitialiser à la fin de l'audio
-    adhanPreview.onended = function() {
-        console.log('Lecture terminée normalement');
-        adhanPlayPromise = null;
-        previewBtn.dataset.playing = "false";
-        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
-    };
+            console.error('Exception lecture:', err);
+            previewBtn.dataset.playing = "false";
+            previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+            if (currentAdhanAudio === newAudio) {
+                currentAdhanAudio = null;
+            }
+            newAudio.remove();
+        }
+    }, { once: true });
+
+    // Définir la source et commencer le chargement
+    newAudio.src = adhanUrl;
+    newAudio.load();
 }
 
 // Fonction pour mettre à jour les traductions des paramètres d'adhan
