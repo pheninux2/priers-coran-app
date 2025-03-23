@@ -1,3 +1,53 @@
+/**
+ * priers.js - Application complète de prières islamiques
+ * Version: 2.0
+ * Organisation monolithique avec sections clairement délimitées
+ */
+
+/************************************
+ * SECTION 1: CONFIGURATION & VARIABLES GLOBALES
+ ************************************/
+
+// Chemins des fichiers audio d'adhan
+// const adhanPaths = {
+//     adhan1: './madinah.mp3',
+//     adhan2: './makkah.mp3',
+//     beep: './beep.mp3'
+// };
+
+// Essayez ceci
+const adhanPaths = {
+    adhan1: 'https://www.islamcan.com/audio/adhan/azan1.mp3', // URL en ligne
+    adhan2: 'https://www.islamcan.com/audio/adhan/azan3.mp3', // URL en ligne
+    beep: './beep.mp3'
+};
+
+// Variable pour suivre si l'arrêt est volontaire ou non
+let isManualStop = false;
+
+// Variables globales de l'application
+let packageName = '';
+let currentPosition = null;
+let prayerTimes = null;
+let currentPrayer = null;
+let nextPrayer = null;
+let countdownInterval = null;
+let currentLanguage = 'fr';
+let primaryColor = '#5D5CDE';
+let currentSurah = null;
+let bookmarkData = null;
+let reminders = [];
+let adhanPlayPromise = null; // Nouvelle variable pour gérer les promesses d'adhan
+
+// Initialiser packageName si l'interface Android est disponible
+if (window.AndroidInterface) {
+    packageName = window.AndroidInterface.getPackageName();
+}
+
+/************************************
+ * SECTION 2: TRADUCTIONS
+ ************************************/
+
 // Translations
 const translations = {
     fr: {
@@ -57,7 +107,17 @@ const translations = {
         confirmDelete: "Êtes-vous sûr de vouloir supprimer ce rappel?",
         yes: "Oui",
         no: "Non",
-        reminderDeleted: "Rappel supprimé"
+        reminderDeleted: "Rappel supprimé",
+        // Ajout des traductions pour adhan
+        adhanTitle: 'Adhan (Appel à la prière)',
+        adhanSettingsTitle: 'Paramètres Adhan',
+        adhanSettingsDesc: 'Configurez votre adhan préféré pour chaque prière',
+        listen: 'Écouter',
+        adhanPlayError: 'Erreur lors de la lecture de l\'adhan',
+        stop: 'Arrêter',
+        adhanEnabled: 'Adhan activé',
+        adhanDisabled: 'Adhan désactivé',
+        beepEnabled: 'Bip activé'
     },
     en: {
         appTitle: "Prayer Times",
@@ -116,7 +176,17 @@ const translations = {
         confirmDelete: "Are you sure you want to delete this reminder?",
         yes: "Yes",
         no: "No",
-        reminderDeleted: "Reminder deleted"
+        reminderDeleted: "Reminder deleted",
+        // Ajout des traductions pour adhan
+        adhanTitle: 'Adhan (Call to Prayer)',
+        adhanSettingsTitle: 'Adhan Settings',
+        adhanSettingsDesc: 'Configure your preferred adhan for each prayer',
+        listen: 'Listen',
+        adhanPlayError: 'Error playing adhan',
+        stop: 'Stop',
+        adhanEnabled: 'Adhan enabled',
+        adhanDisabled: 'Adhan disabled',
+        beepEnabled: 'Beep enabled'
     },
     ar: {
         appTitle: "مواقيت الصلاة",
@@ -175,9 +245,23 @@ const translations = {
         confirmDelete: "هل أنت متأكد من أنك تريد حذف هذا التذكير؟",
         yes: "نعم",
         no: "لا",
-        reminderDeleted: "تم حذف التذكير"
+        reminderDeleted: "تم حذف التذكير",
+        // Ajout des traductions pour adhan
+        adhanTitle: 'الأذان (دعوة للصلاة)',
+        adhanSettingsTitle: 'إعدادات الأذان',
+        adhanSettingsDesc: 'قم بتكوين الأذان المفضل لكل صلاة',
+        listen: 'استمع',
+        adhanPlayError: 'خطأ في تشغيل الأذان',
+        stop: 'توقف',
+        adhanEnabled: 'الأذان مفعّل',
+        adhanDisabled: 'الأذان غير مفعّل',
+        beepEnabled: 'تنبيه صوتي مفعّل'
     }
 };
+
+/************************************
+ * SECTION 3: MODÈLES DE DONNÉES
+ ************************************/
 
 // Douas list - Une liste d'invocations communes
 const douasList = [
@@ -283,6 +367,20 @@ const douasList = [
     }
 ];
 
+// Variables pour les adhan
+let adhanSettings = {
+    enabled: true,
+    Fajr: 'adhan1',
+    Dhuhr: 'adhan1',
+    Asr: 'adhan1',
+    Maghrib: 'adhan1',
+    Isha: 'adhan1'
+};
+
+/************************************
+ * SECTION 4: RÉFÉRENCES DOM
+ ************************************/
+
 // DOM Elements
 const locationPermissionEl = document.getElementById('location-permission');
 const locationPermissionTextEl = document.getElementById('location-permission-text');
@@ -381,17 +479,9 @@ const prayerTimeElements = {
     Isha: document.getElementById('isha-time')
 };
 
-// Store the prayer times and user's location
-let currentPosition = null;
-let prayerTimes = null;
-let currentPrayer = null;
-let nextPrayer = null;
-let countdownInterval = null;
-let currentLanguage = 'fr';
-let primaryColor = '#5D5CDE';
-let currentSurah = null;
-let bookmarkData = null;
-let reminders = [];
+/************************************
+ * SECTION 5: UTILITAIRES UI
+ ************************************/
 
 // Show toast message
 function showToast(message, isError = false) {
@@ -402,354 +492,6 @@ function showToast(message, isError = false) {
     setTimeout(() => {
         toast.classList.remove('show');
     }, 3000);
-}
-
-// Load bookmarks from localStorage
-function loadBookmarks() {
-    try {
-        const bookmarksStr = localStorage.getItem('quran_bookmarks');
-        if (bookmarksStr) {
-            return JSON.parse(bookmarksStr);
-        }
-    } catch (error) {
-        console.error('Error loading bookmarks:', error);
-    }
-    return null;
-}
-
-// Save bookmark to localStorage
-function saveBookmark(surahNumber, versesNumber, verseId) {
-    try {
-        const bookmark = {
-            surahNumber,
-            versesNumber,
-            verseId,
-            timestamp: new Date().getTime()
-        };
-        localStorage.setItem('quran_bookmarks', JSON.stringify(bookmark));
-    } catch (error) {
-        console.error('Error saving bookmark:', error);
-    }
-}
-
-// Check if there's a bookmark and update UI
-function checkAndDisplayBookmark() {
-    bookmarkData = loadBookmarks();
-
-    if (bookmarkData) {
-        continueReadingContainer.classList.remove('hidden');
-
-        // Get the surah name if possible
-        let surahName = '';
-        const surahOption = Array.from(surahSelect.options).find(opt => opt.value === bookmarkData.surahNumber.toString());
-        if (surahOption) {
-            surahName = surahOption.textContent.split('.')[1].trim();
-        }
-
-        if (surahName) {
-            continueReadingBtn.title = `${surahName}, verset ${bookmarkData.versesNumber}`;
-        }
-    } else {
-        continueReadingContainer.classList.add('hidden');
-    }
-}
-
-// Load reminders from localStorage
-function loadReminders() {
-    try {
-        const remindersStr = localStorage.getItem('prayer_reminders');
-        if (remindersStr) {
-            reminders = JSON.parse(remindersStr);
-        } else {
-            reminders = [];
-        }
-    } catch (error) {
-        console.error('Error loading reminders:', error);
-        reminders = [];
-    }
-
-    updateRemindersDisplay();
-    checkUpcomingReminders();
-}
-
-// Save reminders to localStorage
-function saveReminders() {
-    try {
-        localStorage.setItem('prayer_reminders', JSON.stringify(reminders));
-    } catch (error) {
-        console.error('Error saving reminders:', error);
-    }
-
-    updateRemindersDisplay();
-}
-
-// Update reminders display in the settings tab
-function updateRemindersDisplay() {
-    // Clear existing reminders
-    const existingReminders = remindersListEl.querySelectorAll('.reminder-item');
-    existingReminders.forEach(el => el.remove());
-
-    if (reminders.length === 0) {
-        noRemindersEl.classList.remove('hidden');
-    } else {
-        noRemindersEl.classList.add('hidden');
-
-        // Add reminders to the list
-        reminders.forEach((reminder, index) => {
-            const reminderEl = document.createElement('div');
-            reminderEl.className = 'reminder-item bg-white dark:bg-gray-800 p-3 rounded-md flex justify-between items-center';
-            reminderEl.dataset.index = index;
-
-            // Format date and time
-            const date = new Date(reminder.datetime);
-            const formattedDate = date.toLocaleDateString(currentLanguage === 'fr' ? 'fr-FR' :
-                currentLanguage === 'en' ? 'en-US' : 'ar-SA');
-            const formattedTime = date.toLocaleTimeString(currentLanguage === 'fr' ? 'fr-FR' :
-                    currentLanguage === 'en' ? 'en-US' : 'ar-SA',
-                {hour: '2-digit', minute: '2-digit'});
-
-            // Create reminder info
-            const reminderInfo = document.createElement('div');
-            reminderInfo.className = 'flex-1';
-
-            const reminderTitle = document.createElement('div');
-            reminderTitle.className = 'font-medium';
-            reminderTitle.textContent = reminder.title;
-
-            const reminderDetails = document.createElement('div');
-            reminderDetails.className = 'text-sm text-gray-500 dark:text-gray-400';
-            reminderDetails.textContent = `${formattedDate}, ${formattedTime}${reminder.repeat ? ' - ' + (currentLanguage === 'fr' ? 'Quotidien' : currentLanguage === 'en' ? 'Daily' : 'يومي') : ''}`;
-
-            reminderInfo.appendChild(reminderTitle);
-            reminderInfo.appendChild(reminderDetails);
-
-            // Create delete button
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'text-red-500 hover:text-red-700 p-1';
-            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-            deleteBtn.title = translations[currentLanguage].deleteReminder;
-
-            deleteBtn.addEventListener('click', () => {
-                if (confirm(translations[currentLanguage].confirmDelete)) {
-                    reminders.splice(index, 1);
-                    saveReminders();
-                    showToast(translations[currentLanguage].reminderDeleted);
-                }
-            });
-
-            reminderEl.appendChild(reminderInfo);
-            reminderEl.appendChild(deleteBtn);
-
-            remindersListEl.insertBefore(reminderEl, noRemindersEl);
-        });
-    }
-}
-
-// Check for upcoming reminders
-function checkUpcomingReminders() {
-    const now = new Date();
-
-    reminders.forEach((reminder, index) => {
-        const reminderTime = new Date(reminder.datetime);
-
-        // If reminder is due
-        if (reminderTime <= now) {
-            // Show notification if possible
-            if ('Notification' in window && Notification.permission === 'granted') {
-                const notification = new Notification(reminder.title, {
-                    body: reminder.content,
-                    icon: 'https://i.imgur.com/favicon.ico'
-                });
-
-                notification.onclick = function () {
-                    window.focus();
-                    this.close();
-                };
-            }
-
-            // If it's a repeating reminder, update for tomorrow
-            if (reminder.repeat) {
-                const tomorrow = new Date(reminderTime);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                reminders[index].datetime = tomorrow.toISOString();
-            } else {
-                // Remove one-time reminders that are done
-                reminders.splice(index, 1);
-            }
-
-            saveReminders();
-        }
-    });
-
-    // Check again in a minute
-    setTimeout(checkUpcomingReminders, 60000);
-}
-
-// Create a reminder for reading
-// Mise à jour de la fonction createReading pour inclure les informations de navigation
-function createReading(type, id, title, content) {
-    // Reset et préparer le modal comme avant
-    reminderTitleInput.value = title;
-
-    const today = new Date();
-    const dateStr = today.toISOString().split('T')[0];
-    reminderDateInput.value = dateStr;
-
-    const timeStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
-    reminderTimeInput.value = timeStr;
-
-    reminderRepeatCheckbox.checked = false;
-
-    // Stocker les informations de navigation
-    let navigationType = type;
-    let navigationId = id;
-
-    // Si c'est un verset, formater correctement l'ID
-    if (type === 'verse' && currentSurah) {
-        navigationId = `${currentSurah.number}:${id}`;
-    }
-
-    // Stocker ces valeurs pour les utiliser dans saveReminderBtn.addEventListener
-    reminderTypeInput.value = navigationType;
-
-    // Stocker aussi les anciennes valeurs pour la compatibilité
-    reminderSurahIdInput.value = '';
-    reminderDouaIdInput.value = '';
-    reminderVerseIdInput.value = '';
-
-    if (type === 'surah') {
-        reminderSurahIdInput.value = id;
-    } else if (type === 'doua') {
-        reminderDouaIdInput.value = id;
-    } else if (type === 'verse') {
-        reminderVerseIdInput.value = id;
-        reminderSurahIdInput.value = currentSurah?.number || '';
-    }
-
-    // Ajouter un attribut de données personnalisé pour stocker l'ID de navigation
-    reminderModal.dataset.navigationId = navigationId;
-
-    // Afficher le modal
-    reminderModal.classList.remove('hidden');
-}
-
-// Share content function
-function shareContentFunc(title, content) {
-    shareContentTextarea.value = content;
-    shareModal.classList.remove('hidden');
-
-    // Check if Web Share API is available
-    if (navigator.share) {
-        nativeShareBtn.classList.remove('hidden');
-    } else {
-        nativeShareBtn.classList.add('hidden');
-    }
-}
-
-// Apply language
-function applyLanguage(lang) {
-    currentLanguage = lang;
-    const t = translations[lang];
-
-    // Update tab buttons
-    document.querySelector('#tab-prayers .tab-text').textContent = t.prayers;
-    document.querySelector('#tab-quran .tab-text').textContent = t.quran;
-    document.querySelector('#tab-douas .tab-text').textContent = t.douas;
-    document.querySelector('#tab-settings .tab-text').textContent = t.settings;
-
-    // Update header
-    document.getElementById('app-title').textContent = t.appTitle;
-
-    // Update prayer section
-    nextPrayerTitleEl.textContent = t.nextPrayer;
-    document.querySelector('#fajr .prayer-name').textContent = t.fajrName;
-    document.querySelector('#fajr .prayer-description').textContent = t.fajrDesc;
-    document.querySelector('#sunrise .prayer-name').textContent = t.sunriseName;
-    document.querySelector('#sunrise .prayer-description').textContent = t.sunriseDesc;
-    document.querySelector('#dhuhr .prayer-name').textContent = t.dhuhrName;
-    document.querySelector('#dhuhr .prayer-description').textContent = t.dhuhrDesc;
-    document.querySelector('#asr .prayer-name').textContent = t.asrName;
-    document.querySelector('#asr .prayer-description').textContent = t.asrDesc;
-    document.querySelector('#maghrib .prayer-name').textContent = t.maghribName;
-    document.querySelector('#maghrib .prayer-description').textContent = t.maghribDesc;
-    document.querySelector('#isha .prayer-name').textContent = t.ishaName;
-    document.querySelector('#isha .prayer-description').textContent = t.ishaDesc;
-
-    // Update location permission
-    locationPermissionTextEl.textContent = t.locationPermission;
-    allowLocationTextEl.textContent = t.allowLocation;
-
-    // Update calculation method
-    calculationInfoEl.textContent = t.calculationInfo;
-    calculationMethodLabelEl.textContent = t.calculationMethod;
-
-    // Update Quran section
-    selectSurahLabelEl.textContent = t.selectSurah;
-    if (!surahSelect.options.length) {
-        loadingSurahsEl.textContent = t.loadingSurahs;
-    }
-    loadSurahTextEl.textContent = t.read;
-    quranErrorTextEl.textContent = t.quranError;
-    continueReadingTextEl.textContent = t.continueReading;
-
-    // Update quran action buttons
-    createReminderTextEl.textContent = t.createReminder;
-    shareSurahTextEl.textContent = t.share;
-
-    // Update Douas section
-    douasTitleEl.textContent = t.douasTitle;
-    douaSearchEl.placeholder = t.searchDoua;
-
-    // Update settings section
-    document.getElementById('settings-title').textContent = t.settingsTitle;
-    document.getElementById('language-title').textContent = t.languageTitle;
-    document.getElementById('theme-title').textContent = t.themeTitle;
-    document.getElementById('theme-description').textContent = t.themeDescription;
-    document.getElementById('color-title').textContent = t.colorTitle;
-    remindersTitle.textContent = t.remindersTitle;
-    noRemindersText.textContent = t.noReminders;
-
-    // Update reminder modal
-    reminderModalTitle.textContent = t.reminderModalTitle;
-    reminderTitleLabel.textContent = t.reminderTitleLabel;
-    reminderDateLabel.textContent = t.reminderDateLabel;
-    reminderTimeLabel.textContent = t.reminderTimeLabel;
-    reminderRepeatLabel.textContent = t.reminderRepeatLabel;
-    cancelReminderText.textContent = t.cancel;
-    saveReminderText.textContent = t.save;
-
-    // Update share modal
-    shareModalTitle.textContent = t.shareModalTitle;
-    closeShareText.textContent = t.close;
-    copyShareText.textContent = t.copy;
-    nativeShareText.textContent = t.nativeShare;
-
-    // Update language buttons highlight
-    languageBtns.forEach(btn => {
-        if (btn.dataset.lang === lang) {
-            btn.classList.add('bg-primary', 'text-white', 'border-primary');
-            btn.classList.remove('border-gray-300', 'dark:border-gray-700');
-        } else {
-            btn.classList.remove('bg-primary', 'text-white', 'border-primary');
-            btn.classList.add('border-gray-300', 'dark:border-gray-700');
-        }
-    });
-
-    // Change document direction
-    if (lang === 'ar') {
-        document.body.classList.add('arabic-text');
-    } else {
-        document.body.classList.remove('arabic-text');
-    }
-
-    // Update douas list
-    updateDouasList();
-
-    // Update reminders display
-    updateRemindersDisplay();
-
-    // Save language preference
-    localStorage.setItem('language', lang);
 }
 
 // Format date according to language
@@ -779,91 +521,29 @@ function formatDate(date) {
     return date.toLocaleDateString(locale, options);
 }
 
+// Share content function
+function shareContentFunc(title, content) {
+    shareContentTextarea.value = content;
+    shareModal.classList.remove('hidden');
+
+    // Check if Web Share API is available
+    if (navigator.share) {
+        nativeShareBtn.classList.remove('hidden');
+    } else {
+        nativeShareBtn.classList.add('hidden');
+    }
+}
+
+/************************************
+ * SECTION 6: FONCTIONNALITÉS DES TEMPS DE PRIÈRE
+ ************************************/
+
 // Convert time string from API (HH:MM) to Date object
 function timeStringToDate(timeStr, date = new Date()) {
     const [hours, minutes] = timeStr.split(':').map(Number);
     const timeDate = new Date(date);
     timeDate.setHours(hours, minutes, 0, 0);
     return timeDate;
-}
-
-// Update douas list based on search and language
-function updateDouasList() {
-    douasListEl.innerHTML = '';
-
-    const searchTerm = douaSearchEl.value.toLowerCase();
-    const filteredDouas = douasList.filter(doua => {
-        const titleField = currentLanguage === 'fr' ? doua.titleFr :
-            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
-        const textField = currentLanguage === 'fr' ? doua.textFr :
-            currentLanguage === 'en' ? doua.textEn : doua.textAr;
-
-        return titleField.toLowerCase().includes(searchTerm) ||
-            textField.toLowerCase().includes(searchTerm);
-    });
-
-    filteredDouas.forEach(doua => {
-        const douaCard = document.createElement('div');
-        douaCard.className = 'doua-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 relative';
-        douaCard.dataset.id = doua.id;
-
-        const title = currentLanguage === 'fr' ? doua.titleFr :
-            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
-        const text = currentLanguage === 'fr' ? doua.textFr :
-            currentLanguage === 'en' ? doua.textEn : doua.textAr;
-
-        // Create title
-        const titleEl = document.createElement('h3');
-        titleEl.className = 'font-bold text-primary mb-2';
-        titleEl.textContent = title;
-
-        // Create text
-        const textEl = document.createElement('p');
-        textEl.className = 'mb-4 text-gray-700 dark:text-gray-300';
-        if (currentLanguage === 'ar') {
-            textEl.classList.add('arabic-text', 'text-lg');
-        }
-        textEl.textContent = text;
-
-        // Create actions
-        const actions = document.createElement('div');
-        actions.className = 'flex justify-end gap-2 mt-2';
-
-        // Share button
-        const shareBtn = document.createElement('button');
-        shareBtn.className = 'text-gray-500 hover:text-primary';
-        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
-        shareBtn.addEventListener('click', () => {
-            const shareTitle = title;
-            const shareText = text;
-            shareContentFunc(shareTitle, shareText);
-        });
-
-        // Reminder button
-        const reminderBtn = document.createElement('button');
-        reminderBtn.className = 'text-gray-500 hover:text-primary ml-4';
-        reminderBtn.innerHTML = '<i class="fas fa-bell"></i>';
-        reminderBtn.addEventListener('click', () => {
-            createReading('doua', doua.id, title, text);
-        });
-
-        actions.appendChild(shareBtn);
-        actions.appendChild(reminderBtn);
-
-        douaCard.appendChild(titleEl);
-        douaCard.appendChild(textEl);
-        douaCard.appendChild(actions);
-
-        douasListEl.appendChild(douaCard);
-    });
-
-    if (filteredDouas.length === 0) {
-        const noResults = document.createElement('div');
-        noResults.className = 'text-center text-gray-500 dark:text-gray-400 py-4';
-        noResults.textContent = currentLanguage === 'fr' ? 'Aucun résultat trouvé' :
-            currentLanguage === 'en' ? 'No results found' : 'لا توجد نتائج';
-        douasListEl.appendChild(noResults);
-    }
 }
 
 // Calculate current and next prayer time
@@ -907,6 +587,21 @@ function calculateCurrentAndNextPrayer() {
             isYesterday: true
         };
         nextPrayer = prayers[0];
+    }
+
+    // Après avoir déterminé la prochaine prière, configurer une alarme pour l'adhan
+    if (nextPrayer) {
+        const now = new Date();
+        const nextTime = nextPrayer.time;
+        const timeDiff = nextTime - now;
+
+        // Si le temps restant est inférieur à 60 secondes et supérieur à 0, jouer l'adhan
+        if (timeDiff <= 60000 && timeDiff > 0) {
+            // Programmer l'adhan pour le moment exact de la prière
+            setTimeout(() => {
+                playAdhanAtPrayerTime(nextPrayer.name);
+            }, timeDiff);
+        }
     }
 
     // Update UI
@@ -1137,6 +832,9 @@ async function loadPrayerTimes() {
         // Show prayer times
         loadingEl.classList.add('hidden');
         prayerTimesEl.classList.remove('hidden');
+
+        // Mettre à jour les indicateurs d'adhan
+        updateAdhanIndicators();
     } catch (error) {
         console.error('Error:', error);
         loadingEl.classList.add('hidden');
@@ -1157,6 +855,60 @@ async function loadPrayerTimes() {
         errorMessageEl.textContent = `${currentLanguage === 'fr' ? 'Erreur' :
             currentLanguage === 'en' ? 'Error' :
                 'خطأ'}: ${error.message || errorMessage}`;
+    }
+}
+
+/************************************
+ * SECTION 7: FONCTIONNALITÉS DU CORAN
+ ************************************/
+
+// Load bookmarks from localStorage
+function loadBookmarks() {
+    try {
+        const bookmarksStr = localStorage.getItem('quran_bookmarks');
+        if (bookmarksStr) {
+            return JSON.parse(bookmarksStr);
+        }
+    } catch (error) {
+        console.error('Error loading bookmarks:', error);
+    }
+    return null;
+}
+
+// Save bookmark to localStorage
+function saveBookmark(surahNumber, versesNumber, verseId) {
+    try {
+        const bookmark = {
+            surahNumber,
+            versesNumber,
+            verseId,
+            timestamp: new Date().getTime()
+        };
+        localStorage.setItem('quran_bookmarks', JSON.stringify(bookmark));
+    } catch (error) {
+        console.error('Error saving bookmark:', error);
+    }
+}
+
+// Check if there's a bookmark and update UI
+function checkAndDisplayBookmark() {
+    bookmarkData = loadBookmarks();
+
+    if (bookmarkData) {
+        continueReadingContainer.classList.remove('hidden');
+
+        // Get the surah name if possible
+        let surahName = '';
+        const surahOption = Array.from(surahSelect.options).find(opt => opt.value === bookmarkData.surahNumber.toString());
+        if (surahOption) {
+            surahName = surahOption.textContent.split('.')[1].trim();
+        }
+
+        if (surahName) {
+            continueReadingBtn.title = `${surahName}, verset ${bookmarkData.versesNumber}`;
+        }
+    } else {
+        continueReadingContainer.classList.add('hidden');
     }
 }
 
@@ -1409,6 +1161,387 @@ async function fetchQuranSurah(surahNumber, scrollToVerse = null) {
     }
 }
 
+/************************************
+ * SECTION 8: FONCTIONNALITÉS DES DOUAS
+ ************************************/
+
+// Update douas list based on search and language
+function updateDouasList() {
+    douasListEl.innerHTML = '';
+
+    const searchTerm = douaSearchEl.value.toLowerCase();
+    const filteredDouas = douasList.filter(doua => {
+        const titleField = currentLanguage === 'fr' ? doua.titleFr :
+            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
+        const textField = currentLanguage === 'fr' ? doua.textFr :
+            currentLanguage === 'en' ? doua.textEn : doua.textAr;
+
+        return titleField.toLowerCase().includes(searchTerm) ||
+            textField.toLowerCase().includes(searchTerm);
+    });
+
+    filteredDouas.forEach(doua => {
+        const douaCard = document.createElement('div');
+        douaCard.className = 'doua-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 relative';
+        douaCard.dataset.id = doua.id;
+
+        const title = currentLanguage === 'fr' ? doua.titleFr :
+            currentLanguage === 'en' ? doua.titleEn : doua.titleAr;
+        const text = currentLanguage === 'fr' ? doua.textFr :
+            currentLanguage === 'en' ? doua.textEn : doua.textAr;
+
+        // Create title
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'font-bold text-primary mb-2';
+        titleEl.textContent = title;
+
+        // Create text
+        const textEl = document.createElement('p');
+        textEl.className = 'mb-4 text-gray-700 dark:text-gray-300';
+        if (currentLanguage === 'ar') {
+            textEl.classList.add('arabic-text', 'text-lg');
+        }
+        textEl.textContent = text;
+
+        // Create actions
+        const actions = document.createElement('div');
+        actions.className = 'flex justify-end gap-2 mt-2';
+
+        // Share button
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'text-gray-500 hover:text-primary';
+        shareBtn.innerHTML = '<i class="fas fa-share-alt"></i>';
+        shareBtn.addEventListener('click', () => {
+            const shareTitle = title;
+            const shareText = text;
+            shareContentFunc(shareTitle, shareText);
+        });
+
+        // Reminder button
+        const reminderBtn = document.createElement('button');
+        reminderBtn.className = 'text-gray-500 hover:text-primary ml-4';
+        reminderBtn.innerHTML = '<i class="fas fa-bell"></i>';
+        reminderBtn.addEventListener('click', () => {
+            createReading('doua', doua.id, title, text);
+        });
+
+        actions.appendChild(shareBtn);
+        actions.appendChild(reminderBtn);
+
+        douaCard.appendChild(titleEl);
+        douaCard.appendChild(textEl);
+        douaCard.appendChild(actions);
+
+        douasListEl.appendChild(douaCard);
+    });
+
+    if (filteredDouas.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'text-center text-gray-500 dark:text-gray-400 py-4';
+        noResults.textContent = currentLanguage === 'fr' ? 'Aucun résultat trouvé' :
+            currentLanguage === 'en' ? 'No results found' : 'لا توجد نتائج';
+        douasListEl.appendChild(noResults);
+    }
+}
+
+/************************************
+ * SECTION 9: FONCTIONNALITÉS DE RAPPELS
+ ************************************/
+
+// Load reminders from localStorage
+function loadReminders() {
+    try {
+        const remindersStr = localStorage.getItem('prayer_reminders');
+        if (remindersStr) {
+            reminders = JSON.parse(remindersStr);
+        } else {
+            reminders = [];
+        }
+    } catch (error) {
+        console.error('Error loading reminders:', error);
+        reminders = [];
+    }
+
+    updateRemindersDisplay();
+    checkUpcomingReminders();
+}
+
+// Save reminders to localStorage
+function saveReminders() {
+    try {
+        localStorage.setItem('prayer_reminders', JSON.stringify(reminders));
+    } catch (error) {
+        console.error('Error saving reminders:', error);
+    }
+
+    updateRemindersDisplay();
+}
+
+// Update reminders display in the settings tab
+function updateRemindersDisplay() {
+    // Clear existing reminders
+    const existingReminders = remindersListEl.querySelectorAll('.reminder-item');
+    existingReminders.forEach(el => el.remove());
+
+    if (reminders.length === 0) {
+        noRemindersEl.classList.remove('hidden');
+    } else {
+        noRemindersEl.classList.add('hidden');
+
+        // Add reminders to the list
+        reminders.forEach((reminder, index) => {
+            const reminderEl = document.createElement('div');
+            reminderEl.className = 'reminder-item bg-white dark:bg-gray-800 p-3 rounded-md flex justify-between items-center';
+            reminderEl.dataset.index = index;
+
+            // Format date and time
+            const date = new Date(reminder.datetime);
+            const formattedDate = date.toLocaleDateString(currentLanguage === 'fr' ? 'fr-FR' :
+                currentLanguage === 'en' ? 'en-US' : 'ar-SA');
+            const formattedTime = date.toLocaleTimeString(currentLanguage === 'fr' ? 'fr-FR' :
+                    currentLanguage === 'en' ? 'en-US' : 'ar-SA',
+                {hour: '2-digit', minute: '2-digit'});
+
+            // Create reminder info
+            const reminderInfo = document.createElement('div');
+            reminderInfo.className = 'flex-1';
+
+            const reminderTitle = document.createElement('div');
+            reminderTitle.className = 'font-medium';
+            reminderTitle.textContent = reminder.title;
+
+            const reminderDetails = document.createElement('div');
+            reminderDetails.className = 'text-sm text-gray-500 dark:text-gray-400';
+            reminderDetails.textContent = `${formattedDate}, ${formattedTime}${reminder.repeat ? ' - ' + (currentLanguage === 'fr' ? 'Quotidien' : currentLanguage === 'en' ? 'Daily' : 'يومي') : ''}`;
+
+            reminderInfo.appendChild(reminderTitle);
+            reminderInfo.appendChild(reminderDetails);
+
+            // Create delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'text-red-500 hover:text-red-700 p-1';
+            deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            deleteBtn.title = translations[currentLanguage].deleteReminder;
+
+            deleteBtn.addEventListener('click', () => {
+                if (confirm(translations[currentLanguage].confirmDelete)) {
+                    reminders.splice(index, 1);
+                    saveReminders();
+                    showToast(translations[currentLanguage].reminderDeleted);
+                }
+            });
+
+            reminderEl.appendChild(reminderInfo);
+            reminderEl.appendChild(deleteBtn);
+
+            remindersListEl.insertBefore(reminderEl, noRemindersEl);
+        });
+    }
+}
+
+// Check for upcoming reminders
+function checkUpcomingReminders() {
+    const now = new Date();
+
+    reminders.forEach((reminder, index) => {
+        const reminderTime = new Date(reminder.datetime);
+
+        // If reminder is due
+        if (reminderTime <= now) {
+            // Show notification if possible
+            if ('Notification' in window && Notification.permission === 'granted') {
+                const notification = new Notification(reminder.title, {
+                    body: reminder.content,
+                    icon: 'https://i.imgur.com/favicon.ico'
+                });
+
+                notification.onclick = function () {
+                    window.focus();
+                    this.close();
+                };
+            }
+
+            // If it's a repeating reminder, update for tomorrow
+            if (reminder.repeat) {
+                const tomorrow = new Date(reminderTime);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                reminders[index].datetime = tomorrow.toISOString();
+            } else {
+                // Remove one-time reminders that are done
+                reminders.splice(index, 1);
+            }
+
+            saveReminders();
+        }
+    });
+
+    // Check again in a minute
+    setTimeout(checkUpcomingReminders, 60000);
+}
+
+// Create a reminder for reading
+function createReading(type, id, title, content) {
+    // Reset et préparer le modal comme avant
+    reminderTitleInput.value = title;
+
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
+    reminderDateInput.value = dateStr;
+
+    const timeStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
+    reminderTimeInput.value = timeStr;
+
+    reminderRepeatCheckbox.checked = false;
+
+    // Stocker les informations de navigation
+    let navigationType = type;
+    let navigationId = id;
+
+    // Si c'est un verset, formater correctement l'ID
+    if (type === 'verse' && currentSurah) {
+        navigationId = `${currentSurah.number}:${id}`;
+    }
+
+    // Stocker ces valeurs pour les utiliser dans saveReminderBtn.addEventListener
+    reminderTypeInput.value = navigationType;
+
+    // Stocker aussi les anciennes valeurs pour la compatibilité
+    reminderSurahIdInput.value = '';
+    reminderDouaIdInput.value = '';
+    reminderVerseIdInput.value = '';
+
+    if (type === 'surah') {
+        reminderSurahIdInput.value = id;
+    } else if (type === 'doua') {
+        reminderDouaIdInput.value = id;
+    } else if (type === 'verse') {
+        reminderVerseIdInput.value = id;
+        reminderSurahIdInput.value = currentSurah?.number || '';
+    }
+
+    // Ajouter un attribut de données personnalisé pour stocker l'ID de navigation
+    reminderModal.dataset.navigationId = navigationId;
+
+    // Afficher le modal
+    reminderModal.classList.remove('hidden');
+}
+
+/************************************
+ * SECTION 10: FONCTIONNALITÉS DE PARAMÈTRES
+ ************************************/
+
+// Apply language
+function applyLanguage(lang) {
+    currentLanguage = lang;
+    const t = translations[lang];
+
+    // Mettre à jour les traductions pour les paramètres d'adhan
+    updateAdhanTranslations();
+
+    // Update tab buttons
+    document.querySelector('#tab-prayers .tab-text').textContent = t.prayers;
+    document.querySelector('#tab-quran .tab-text').textContent = t.quran;
+    document.querySelector('#tab-douas .tab-text').textContent = t.douas;
+    document.querySelector('#tab-settings .tab-text').textContent = t.settings;
+
+    // Update header
+    document.getElementById('app-title').textContent = t.appTitle;
+
+    // Update prayer section
+    nextPrayerTitleEl.textContent = t.nextPrayer;
+    document.querySelector('#fajr .prayer-name').textContent = t.fajrName;
+    document.querySelector('#fajr .prayer-description').textContent = t.fajrDesc;
+    document.querySelector('#sunrise .prayer-name').textContent = t.sunriseName;
+    document.querySelector('#sunrise .prayer-description').textContent = t.sunriseDesc;
+    document.querySelector('#dhuhr .prayer-name').textContent = t.dhuhrName;
+    document.querySelector('#dhuhr .prayer-description').textContent = t.dhuhrDesc;
+    document.querySelector('#asr .prayer-name').textContent = t.asrName;
+    document.querySelector('#asr .prayer-description').textContent = t.asrDesc;
+    document.querySelector('#maghrib .prayer-name').textContent = t.maghribName;
+    document.querySelector('#maghrib .prayer-description').textContent = t.maghribDesc;
+    document.querySelector('#isha .prayer-name').textContent = t.ishaName;
+    document.querySelector('#isha .prayer-description').textContent = t.ishaDesc;
+
+    // Update location permission
+    locationPermissionTextEl.textContent = t.locationPermission;
+    allowLocationTextEl.textContent = t.allowLocation;
+
+    // Update calculation method
+    calculationInfoEl.textContent = t.calculationInfo;
+    calculationMethodLabelEl.textContent = t.calculationMethod;
+
+    // Update Quran section
+    selectSurahLabelEl.textContent = t.selectSurah;
+    if (!surahSelect.options.length) {
+        loadingSurahsEl.textContent = t.loadingSurahs;
+    }
+    loadSurahTextEl.textContent = t.read;
+    quranErrorTextEl.textContent = t.quranError;
+    continueReadingTextEl.textContent = t.continueReading;
+
+    // Update quran action buttons
+    createReminderTextEl.textContent = t.createReminder;
+    shareSurahTextEl.textContent = t.share;
+
+    // Update Douas section
+    douasTitleEl.textContent = t.douasTitle;
+    douaSearchEl.placeholder = t.searchDoua;
+
+    // Update settings section
+    document.getElementById('settings-title').textContent = t.settingsTitle;
+    document.getElementById('language-title').textContent = t.languageTitle;
+    document.getElementById('theme-title').textContent = t.themeTitle;
+    document.getElementById('theme-description').textContent = t.themeDescription;
+    document.getElementById('color-title').textContent = t.colorTitle;
+    remindersTitle.textContent = t.remindersTitle;
+    noRemindersText.textContent = t.noReminders;
+
+    // Update reminder modal
+    reminderModalTitle.textContent = t.reminderModalTitle;
+    reminderTitleLabel.textContent = t.reminderTitleLabel;
+    reminderDateLabel.textContent = t.reminderDateLabel;
+    reminderTimeLabel.textContent = t.reminderTimeLabel;
+    reminderRepeatLabel.textContent = t.reminderRepeatLabel;
+    cancelReminderText.textContent = t.cancel;
+    saveReminderText.textContent = t.save;
+
+    // Update share modal
+    shareModalTitle.textContent = t.shareModalTitle;
+    closeShareText.textContent = t.close;
+    copyShareText.textContent = t.copy;
+    nativeShareText.textContent = t.nativeShare;
+
+    // Update language buttons highlight
+    languageBtns.forEach(btn => {
+        if (btn.dataset.lang === lang) {
+            btn.classList.add('bg-primary', 'text-white', 'border-primary');
+            btn.classList.remove('border-gray-300', 'dark:border-gray-700');
+        } else {
+            btn.classList.remove('bg-primary', 'text-white', 'border-primary');
+            btn.classList.add('border-gray-300', 'dark:border-gray-700');
+        }
+    });
+
+    // Change document direction
+    if (lang === 'ar') {
+        document.body.classList.add('arabic-text');
+    } else {
+        document.body.classList.remove('arabic-text');
+    }
+
+    // Update douas list
+    updateDouasList();
+
+    // Update reminders display
+    updateRemindersDisplay();
+
+    // Mettre à jour les indicateurs d'adhan après changement de langue
+    updateAdhanIndicators();
+
+    // Save language preference
+    localStorage.setItem('language', lang);
+}
+
 // Apply theme color
 function applyThemeColor(color) {
     // Update primary color
@@ -1423,17 +1556,17 @@ function applyThemeColor(color) {
     }
 
     styleEl.textContent = `
-                :root {
-                    --color-primary: ${color};
-                }
-                .text-primary { color: ${color} !important; }
-                .bg-primary { background-color: ${color} !important; }
-                .border-primary { border-color: ${color} !important; }
-                .bg-primary\\/10 { background-color: ${color}1A !important; }
-                .bg-primary\\/5 { background-color: ${color}0D !important; }
-                input:checked + .slider { background-color: ${color} !important; }
-                .loader { border-top-color: ${color} !important; }
-            `;
+        :root {
+            --color-primary: ${color};
+        }
+        .text-primary { color: ${color} !important; }
+        .bg-primary { background-color: ${color} !important; }
+        .border-primary { border-color: ${color} !important; }
+        .bg-primary\\/10 { background-color: ${color}1A !important; }
+        .bg-primary\\/5 { background-color: ${color}0D !important; }
+        input:checked + .slider { background-color: ${color} !important; }
+        .loader { border-top-color: ${color} !important; }
+    `;
 
     // Update color button highlights
     colorBtns.forEach(btn => {
@@ -1448,48 +1581,710 @@ function applyThemeColor(color) {
     localStorage.setItem('themeColor', color);
 }
 
-// Tab Switching Logic
-tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const target = btn.id.replace('tab-', '');
+// Load saved preferences
+function loadSavedPreferences() {
+    // Load theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        themeToggle.checked = true;
+    } else if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+        themeToggle.checked = false;
+    }
 
-        // Reset tabs
-        tabBtns.forEach(b => {
-            b.classList.remove('border-primary', 'text-primary');
-            b.classList.add('text-gray-500', 'dark:text-gray-400', 'border-transparent');
-        });
+    // Load language
+    const savedLanguage = localStorage.getItem('language');
+    if (savedLanguage && ['fr', 'en', 'ar'].includes(savedLanguage)) {
+        applyLanguage(savedLanguage);
+    } else {
+        applyLanguage('fr'); // Default to French
+    }
 
-        // Activate clicked tab
-        btn.classList.add('border-primary', 'text-primary');
-        btn.classList.remove('text-gray-500', 'dark:text-gray-400', 'border-transparent');
+    // Load theme color
+    const savedColor = localStorage.getItem('themeColor');
+    if (savedColor) {
+        applyThemeColor(savedColor);
+    } else {
+        applyThemeColor('#5D5CDE'); // Default primary color
+    }
 
-        // Toggle content
-        tabContents.forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(`${target}-content`).classList.add('active');
+    // Load bookmarks
+    checkAndDisplayBookmark();
 
-        // Load specific content for tabs
-        if (target === 'quran' && !surahSelect.options.length) {
-            fetchQuranSurahs();
-        } else if (target === 'douas' && douasListEl.children.length === 0) {
-            updateDouasList();
+    // Load reminders
+    loadReminders();
+
+    // Load adhan settings
+    loadAdhanSettings();
+}
+
+/************************************
+ * SECTION 11: FONCTIONNALITÉS ADHAN
+ ************************************/
+
+// Création dynamique des éléments de l'UI pour Adhan
+function createAdhanSettingsUI() {
+    // Vérifier si les éléments existent déjà
+    if (document.getElementById('adhan-title')) {
+        return; // L'UI Adhan existe déjà
+    }
+
+    // Créer le conteneur principal
+    const adhanSection = document.createElement('div');
+    adhanSection.className = 'mt-8';
+    adhanSection.innerHTML = `
+      <h3 id="adhan-title" class="text-lg font-semibold mb-4">Adhan (Appel à la prière)</h3>
+      
+      <div class="space-y-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+          <div class="flex justify-between items-center mb-2">
+            <div>
+              <span id="adhan-settings-title" class="font-medium">Paramètres Adhan</span>
+              <p id="adhan-settings-desc" class="text-sm text-gray-500 dark:text-gray-400">Configurez votre adhan préféré pour chaque prière</p>
+            </div>
+            <label class="inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="adhan-enabled" class="sr-only peer" checked>
+              <div class="relative w-11 h-6 bg-gray-200 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+            </label>
+          </div>
+        </div>
+        
+        <div id="adhan-container" class="space-y-3">
+          <!-- Fajr -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span id="adhan-fajr" class="font-medium">Fajr</span>
+              <select id="adhan-fajr-type" class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm" data-prayer="Fajr">
+                <option value="adhan1">Adhan Makkah</option>
+                <option value="adhan2">Adhan Madinah</option>
+                <option value="beep">Bip</option>
+                <option value="none">Aucun</option>
+              </select>
+            </div>
+            <button id="preview-fajr" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-primary" data-prayer="Fajr" data-playing="false">
+              <i class="fas fa-play mr-1"></i> <span id="preview-fajr-text">Écouter</span>
+            </button>
+          </div>
+
+          <!-- Dhuhr -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span id="adhan-dhuhr" class="font-medium">Dhuhr</span>
+              <select id="adhan-dhuhr-type" class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm" data-prayer="Dhuhr">
+                <option value="adhan1">Adhan Makkah</option>
+                <option value="adhan2">Adhan Madinah</option>
+                <option value="beep">Bip</option>
+                <option value="none">Aucun</option>
+              </select>
+            </div>
+            <button id="preview-dhuhr" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-primary" data-prayer="Dhuhr" data-playing="false">
+              <i class="fas fa-play mr-1"></i> <span id="preview-dhuhr-text">Écouter</span>
+            </button>
+          </div>
+
+          <!-- Asr -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span id="adhan-asr" class="font-medium">Asr</span>
+              <select id="adhan-asr-type" class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm" data-prayer="Asr">
+                <option value="adhan1">Adhan Makkah</option>
+                <option value="adhan2">Adhan Madinah</option>
+                <option value="beep">Bip</option>
+                <option value="none">Aucun</option>
+              </select>
+            </div>
+            <button id="preview-asr" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-primary" data-prayer="Asr" data-playing="false">
+              <i class="fas fa-play mr-1"></i> <span id="preview-asr-text">Écouter</span>
+            </button>
+          </div>
+
+          <!-- Maghrib -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span id="adhan-maghrib" class="font-medium">Maghrib</span>
+              <select id="adhan-maghrib-type" class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm" data-prayer="Maghrib">
+                <option value="adhan1">Adhan Makkah</option>
+                <option value="adhan2">Adhan Madinah</option>
+                <option value="beep">Bip</option>
+                <option value="none">Aucun</option>
+              </select>
+            </div>
+            <button id="preview-maghrib" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-primary" data-prayer="Maghrib" data-playing="false">
+              <i class="fas fa-play mr-1"></i> <span id="preview-maghrib-text">Écouter</span>
+            </button>
+          </div>
+
+          <!-- Isha -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-center mb-2">
+              <span id="adhan-isha" class="font-medium">Isha</span>
+              <select id="adhan-isha-type" class="rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-sm" data-prayer="Isha">
+                <option value="adhan1">Adhan Makkah</option>
+                <option value="adhan2">Adhan Madinah</option>
+                <option value="beep">Bip</option>
+                <option value="none">Aucun</option>
+              </select>
+            </div>
+            <button id="preview-isha" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-primary" data-prayer="Isha" data-playing="false">
+              <i class="fas fa-play mr-1"></i> <span id="preview-isha-text">Écouter</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Ajouter l'élément audio pour la prévisualisation
+    const audioElement = document.createElement('audio');
+    audioElement.id = 'adhan-preview';
+    audioElement.preload = 'none';
+    adhanSection.appendChild(audioElement);
+
+    // Ajouter au contenu des paramètres
+    const settingsContent = document.getElementById('settings-content');
+    if (settingsContent) {
+        settingsContent.appendChild(adhanSection);
+    }
+}
+
+// Fonction pour charger les paramètres d'adhan
+function loadAdhanSettings() {
+    try {
+        // Créer l'interface d'adhan si elle n'existe pas
+        createAdhanSettingsUI();
+
+        const savedSettings = localStorage.getItem('adhan_settings');
+        if (savedSettings) {
+            adhanSettings = JSON.parse(savedSettings);
+
+            // Appliquer les valeurs enregistrées aux éléments de l'interface
+            const adhanEnabledElement = document.getElementById('adhan-enabled');
+            if (adhanEnabledElement) {
+                adhanEnabledElement.checked = adhanSettings.enabled;
+
+                // Mettre à jour la visibilité du conteneur d'adhan
+                const adhanContainer = document.getElementById('adhan-container');
+                if (adhanContainer) {
+                    adhanContainer.style.display = adhanSettings.enabled ? 'block' : 'none';
+                }
+            }
+
+            for (const prayer of ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
+                const selectElem = document.getElementById(`adhan-${prayer.toLowerCase()}-type`);
+                if (selectElem && adhanSettings[prayer]) {
+                    selectElem.value = adhanSettings[prayer];
+                }
+            }
+        }
+
+        // Mettre à jour les traductions
+        updateAdhanTranslations();
+
+        // Configurer les gestionnaires d'événements
+        setupAdhanHandlers();
+    } catch (error) {
+        console.error('Error loading adhan settings:', error);
+    }
+    // Mettre à jour les indicateurs d'adhan
+    updateAdhanIndicators();
+}
+
+// Fonction pour sauvegarder les paramètres d'adhan
+function saveAdhanSettings() {
+    try {
+        localStorage.setItem('adhan_settings', JSON.stringify(adhanSettings));
+    } catch (error) {
+        console.error('Error saving adhan settings:', error);
+    }
+}
+
+// Fonction pour prévisualiser l'adhan avec gestion correcte de la promesse
+// Modifiez cette partie de la fonction previewAdhan
+// Variable globale pour garder une référence à l'audio en cours
+let currentAdhanAudio = null;
+
+function previewAdhan(prayer) {
+    // Référence au bouton
+    const previewBtn = document.getElementById(`preview-${prayer.toLowerCase()}`);
+    if (!previewBtn) return;
+
+    // Bloquer les clics multiples
+    if (previewBtn.disabled) return;
+    previewBtn.disabled = true;
+    setTimeout(() => { previewBtn.disabled = false; }, 500);
+
+    // Si on est en train de jouer, arrêter complètement
+    if (previewBtn.dataset.playing === "true") {
+        console.log('Arrêt forcé de la lecture');
+
+        // Indiquer que c'est un arrêt volontaire pour éviter de montrer l'erreur
+        isManualStop = true;
+
+        // Mettre à jour l'interface
+        previewBtn.dataset.playing = "false";
+        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+        // Arrêter et détruire l'audio en cours
+        if (currentAdhanAudio) {
+            try {
+                currentAdhanAudio.pause();
+                currentAdhanAudio.src = '';
+                currentAdhanAudio.remove(); // Retirer du DOM
+                currentAdhanAudio = null;
+            } catch (e) {
+                console.error('Erreur lors de la suppression audio:', e);
+            }
+        }
+
+        // Réinitialiser le flag après un court délai
+        setTimeout(() => {
+            isManualStop = false;
+        }, 300);
+
+        return;
+    }
+
+    // SINON: Démarrer un tout nouveau lecteur
+    console.log('Création d\'un nouveau lecteur audio');
+    isManualStop = false;
+
+    // Mettre à jour l'interface pendant le chargement
+    previewBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">Chargement...</span>`;
+
+    // Obtenir l'URL de l'audio
+    const adhanType = adhanSettings[prayer];
+    const adhanUrl = adhanPaths[adhanType];
+
+    // Créer un nouveau lecteur audio
+    const newAudio = document.createElement('audio');
+    newAudio.style.display = 'none';
+    document.body.appendChild(newAudio);
+
+    // Supprimer l'ancien lecteur si présent
+    if (currentAdhanAudio) {
+        try {
+            currentAdhanAudio.pause();
+            currentAdhanAudio.src = '';
+            currentAdhanAudio.remove();
+        } catch (e) {
+            console.error('Erreur nettoyage audio:', e);
+        }
+    }
+
+    // Définir le nouvel élément comme actif
+    currentAdhanAudio = newAudio;
+
+    // Gestionnaire de fin de lecture
+    newAudio.addEventListener('ended', function() {
+        console.log('Lecture terminée');
+
+        // Mise à jour de l'interface
+        previewBtn.dataset.playing = "false";
+        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+        // Nettoyage
+        if (currentAdhanAudio === newAudio) {
+            currentAdhanAudio = null;
+        }
+
+        // Retirer l'élément du DOM
+        setTimeout(() => {
+            newAudio.remove();
+        }, 100);
+    }, { once: true });
+
+    // Gestionnaire d'erreur - Ne montrer l'erreur que si ce n'est pas un arrêt volontaire
+    newAudio.addEventListener('error', function(e) {
+        console.error('Erreur de lecture:', e);
+
+        // Mise à jour de l'interface
+        previewBtn.dataset.playing = "false";
+        previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+        // Afficher le message d'erreur UNIQUEMENT si ce n'est pas un arrêt manuel
+        if (!isManualStop) {
+            showToast('Erreur de lecture audio', true);
+        }
+
+        // Nettoyage
+        if (currentAdhanAudio === newAudio) {
+            currentAdhanAudio = null;
+        }
+
+        // Retirer l'élément du DOM
+        setTimeout(() => {
+            newAudio.remove();
+        }, 100);
+    }, { once: true });
+
+    // Commencer la lecture une fois prêt
+    newAudio.addEventListener('canplay', function() {
+        console.log('Audio prêt à jouer');
+
+        // Vérifier si l'utilisateur a déjà cliqué pour arrêter avant même que le chargement ne soit terminé
+        if (isManualStop) {
+            console.log('Chargement terminé mais arrêt demandé entre-temps');
+            newAudio.remove();
+            return;
+        }
+
+        // Démarrer la lecture
+        try {
+            const playPromise = newAudio.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('Lecture démarrée');
+
+                    // Vérifier à nouveau si on a demandé l'arrêt pendant que la promesse était en cours
+                    if (isManualStop) {
+                        newAudio.pause();
+                        newAudio.remove();
+                        return;
+                    }
+
+                    // Mise à jour interface en succès
+                    previewBtn.dataset.playing = "true";
+                    previewBtn.innerHTML = `<i class="fas fa-stop mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].stop || 'Arrêter'}</span>`;
+                }).catch(err => {
+                    // Ne pas afficher d'erreur si c'est un arrêt manuel
+                    if (isManualStop) return;
+
+                    console.error('Échec lecture:', err);
+
+                    // Mise à jour interface en échec
+                    previewBtn.dataset.playing = "false";
+                    previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+                    // Nettoyage
+                    if (currentAdhanAudio === newAudio) {
+                        currentAdhanAudio = null;
+                    }
+                    newAudio.remove();
+                });
+            } else {
+                // Pour les navigateurs qui ne retournent pas de promesse
+                console.log('Lecture démarrée (sans promesse)');
+                previewBtn.dataset.playing = "true";
+                previewBtn.innerHTML = `<i class="fas fa-stop mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].stop || 'Arrêter'}</span>`;
+            }
+        } catch (err) {
+            // Ne pas afficher d'erreur si c'est un arrêt manuel
+            if (isManualStop) return;
+
+            console.error('Exception lecture:', err);
+            previewBtn.dataset.playing = "false";
+            previewBtn.innerHTML = `<i class="fas fa-play mr-1"></i> <span id="preview-${prayer.toLowerCase()}-text">${translations[currentLanguage].listen || 'Écouter'}</span>`;
+
+            if (currentAdhanAudio === newAudio) {
+                currentAdhanAudio = null;
+            }
+            newAudio.remove();
+        }
+    }, { once: true });
+
+    // Définir la source et commencer le chargement
+    newAudio.src = adhanUrl;
+    newAudio.load();
+}
+
+// Fonction pour mettre à jour les traductions des paramètres d'adhan
+function updateAdhanTranslations() {
+    const adhanTitle = document.getElementById('adhan-title');
+    const adhanSettingsTitle = document.getElementById('adhan-settings-title');
+    const adhanSettingsDesc = document.getElementById('adhan-settings-desc');
+
+    if (adhanTitle) adhanTitle.textContent = translations[currentLanguage].adhanTitle || 'Adhan (Appel à la prière)';
+    if (adhanSettingsTitle) adhanSettingsTitle.textContent = translations[currentLanguage].adhanSettingsTitle || 'Paramètres Adhan';
+    if (adhanSettingsDesc) adhanSettingsDesc.textContent = translations[currentLanguage].adhanSettingsDesc || 'Configurez votre adhan préféré pour chaque prière';
+
+    // Mettre à jour les noms des prières
+    const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
+    prayers.forEach(prayer => {
+        const prayerElement = document.getElementById(`adhan-${prayer}`);
+        if (prayerElement) prayerElement.textContent = translations[currentLanguage][`${prayer}Name`];
+    });
+
+    // Mettre à jour les textes des boutons de prévisualisation
+    const previewTexts = document.querySelectorAll('[id^="preview-"][id$="-text"]');
+    previewTexts.forEach(elem => {
+        const previewBtn = elem.closest('button');
+        if (elem && previewBtn) {
+            if (previewBtn.dataset.playing === "true") {
+                elem.textContent = translations[currentLanguage].stop || 'Arrêter';
+            } else {
+                elem.textContent = translations[currentLanguage].listen || 'Écouter';
+            }
         }
     });
-});
+}
 
-// Handle method change
-calculationMethodSelect.addEventListener('change', () => {
-    loadPrayerTimes();
-});
+// Fonction pour mettre à jour les indicateurs d'adhan dans l'interface de prière
+function updateAdhanIndicators() {
+    const prayerNames = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
-// Allow location button event handler
+    prayerNames.forEach(prayer => {
+        const prayerCard = document.getElementById(prayer.toLowerCase());
+        if (!prayerCard) return;
+
+        // Retirer tout indicateur existant
+        const existingIndicator = prayerCard.querySelector('.adhan-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+
+        // Ne pas ajouter d'indicateur si l'adhan est désactivé globalement
+        if (!adhanSettings.enabled) return;
+
+        // Ajouter un nouvel indicateur selon le type d'adhan
+        const adhanType = adhanSettings[prayer];
+        if (adhanType && adhanType !== 'none') {
+            const indicatorEl = document.createElement('div');
+            indicatorEl.className = 'adhan-indicator text-xs ml-2';
+
+            if (adhanType === 'beep') {
+                indicatorEl.innerHTML = `<i class="fas fa-volume-up text-yellow-500"></i> <span class="ml-1">${translations[currentLanguage].beepEnabled}</span>`;
+            } else {
+                indicatorEl.innerHTML = `<i class="fas fa-bullhorn text-green-500"></i> <span class="ml-1">${translations[currentLanguage].adhanEnabled}</span>`;
+            }
+
+            // Ajouter l'indicateur dans la carte de prière
+            const titleSection = prayerCard.querySelector('.prayer-name');
+            if (titleSection && titleSection.parentNode) {
+                titleSection.parentNode.appendChild(indicatorEl);
+            }
+        }
+    });
+}
+
+// Fonction pour jouer l'adhan à l'heure de la prière
+function playAdhanAtPrayerTime(prayer) {
+    if (!adhanSettings.enabled) return;
+
+    const adhanType = adhanSettings[prayer];
+
+    // Ne rien jouer si le type est "none"
+    if (adhanType === 'none') return;
+
+    const adhanUrl = adhanPaths[adhanType];
+
+    if (window.AndroidInterface) {
+        // Utiliser l'interface Android pour jouer l'adhan
+        window.AndroidInterface.playAdhan(adhanUrl, prayer);
+    } else {
+        // Fallback pour les navigateurs
+        const audio = new Audio(adhanUrl);
+        audio.play().catch(error => {
+            console.error('Error playing adhan:', error);
+        });
+    }
+}
+
+// Fonction pour configurer les gestionnaires d'événements pour Adhan
+function setupAdhanHandlers() {
+    // Gestion du toggle général d'activation/désactivation
+    const adhanEnabled = document.getElementById('adhan-enabled');
+    if (adhanEnabled) {
+        adhanEnabled.addEventListener('change', function() {
+            adhanSettings.enabled = this.checked;
+            const adhanContainer = document.getElementById('adhan-container');
+            if (adhanContainer) {
+                adhanContainer.style.display = this.checked ? 'block' : 'none';
+            }
+            saveAdhanSettings();
+            updateAdhanIndicators(); // Mettre à jour les indicateurs
+        });
+    }
+
+    // Gestion des sélecteurs d'adhan
+    for (const prayer of ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
+        const selectElem = document.getElementById(`adhan-${prayer.toLowerCase()}-type`);
+        if (selectElem) {
+            selectElem.addEventListener('change', function() {
+                adhanSettings[prayer] = this.value;
+                saveAdhanSettings();
+                updateAdhanIndicators(); // Mettre à jour les indicateurs
+            });
+        }
+
+        // Gestion des boutons de prévisualisation
+        const previewBtn = document.getElementById(`preview-${prayer.toLowerCase()}`);
+        if (previewBtn) {
+            previewBtn.addEventListener('click', function() {
+                previewAdhan(prayer);
+            });
+        }
+    }
+
+    // Arrêter la prévisualisation lors du changement d'onglet
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const adhanPreview = document.getElementById('adhan-preview');
+            if (adhanPreview) {
+                adhanPreview.pause();
+                adhanPreview.currentTime = 0;
+                adhanPlayPromise = null;
+            }
+        });
+    });
+
+    // Mettre à jour les indicateurs au chargement
+    updateAdhanIndicators();
+}
+
+/************************************
+ * SECTION 12: NAVIGATION & INTEGRATION ANDROID
+ ************************************/
+
+// Navigation au contenu spécifique
+function navigateToContent(type, id) {
+    console.log("Navigation vers:", type, id);
+
+    // Selon le type, naviguez vers le contenu approprié
+    if (type === 'surah') {
+        // Activer l'onglet Coran
+        document.getElementById('tab-quran').click();
+
+        // Sélectionner la sourate et la charger
+        const surahNumber = id;
+        if (surahSelect) {
+            surahSelect.value = surahNumber;
+            // Attendre un peu pour s'assurer que la valeur est bien définie
+            setTimeout(() => {
+                fetchQuranSurah(surahNumber);
+            }, 500);
+        }
+    } else if (type === 'verse') {
+        // Activer l'onglet Coran
+        document.getElementById('tab-quran').click();
+
+        // Les données sont au format 'surahNumber:verseNumber'
+        const [surahNumber, verseNumber] = id.split(':');
+
+        if (surahSelect) {
+            surahSelect.value = surahNumber;
+            // Charger la sourate puis défiler jusqu'au verset
+            setTimeout(() => {
+                fetchQuranSurah(surahNumber, `verse-${verseNumber}`);
+            }, 500);
+        }
+    } else if (type === 'doua') {
+        // Activer l'onglet Douas
+        document.getElementById('tab-douas').click();
+
+        // Chercher la doua par ID
+        const douaId = parseInt(id);
+        setTimeout(() => {
+            const douaElement = document.querySelector(`.doua-card[data-id="${douaId}"]`);
+            if (douaElement) {
+                // Faire défiler jusqu'à la doua
+                douaElement.scrollIntoView({behavior: 'smooth', block: 'center'});
+                // Mettre en évidence la doua
+                douaElement.classList.add('bg-primary/10');
+                setTimeout(() => {
+                    douaElement.classList.remove('bg-primary/10');
+                }, 2000);
+            }
+        }, 500);
+    }
+}
+
+// Configuration des notifications natives Android
+function setupAndroidNotifications() {
+    // Vérifier si l'application native Android est disponible
+    if (window.AndroidInterface) {
+        console.log("Application Android détectée - Intégration des notifications natives activée");
+
+        // Remplacer la fonction checkUpcomingReminders pour utiliser les notifications natives
+        window.checkUpcomingReminders = function () {
+            const now = new Date();
+
+            reminders.forEach((reminder, index) => {
+                const reminderTime = new Date(reminder.datetime);
+
+                // Si le rappel est dû
+                if (reminderTime <= now) {
+                    // Envoyer une notification native via l'interface Android
+                    window.AndroidInterface.showNotificationNow(reminder.title, reminder.content);
+
+                    // Si c'est un rappel récurrent, le mettre à jour pour demain
+                    if (reminder.repeat) {
+                        const tomorrow = new Date(reminderTime);
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        reminders[index].datetime = tomorrow.toISOString();
+                    } else {
+                        // Supprimer les rappels ponctuels terminés
+                        reminders.splice(index, 1);
+                    }
+
+                    saveReminders();
+                }
+            });
+
+            // Vérifier à nouveau dans une minute
+            setTimeout(checkUpcomingReminders, 60000);
+        };
+
+        // Intercepter les demandes de Notification web
+        if ('Notification' in window) {
+            const originalNotification = window.Notification;
+            window.Notification = function (title, options) {
+                // Utiliser directement la notification native Android
+                window.AndroidInterface.showNotificationNow(title, options.body || "");
+
+                // Simuler l'API Notification pour la compatibilité
+                return {
+                    onclick: function () {},
+                    close: function () {}
+                };
+            };
+
+            // Simuler la permission toujours accordée
+            window.Notification.permission = "granted";
+            window.Notification.requestPermission = function (callback) {
+                if (callback) callback("granted");
+                return Promise.resolve("granted");
+            };
+        }
+
+        // Synchronisation des rappels existants
+        function syncExistingReminders() {
+            // Synchroniser tous les rappels existants avec le système Android
+            reminders.forEach(reminder => {
+                const reminderTime = new Date(reminder.datetime).getTime();
+
+                if (reminderTime > Date.now()) {
+                    window.AndroidInterface.scheduleNotification(
+                        reminder.title,
+                        reminder.content,
+                        reminderTime,
+                        reminder.type,
+                        reminder.navigationId
+                    );
+                }
+            });
+        }
+
+        // Synchroniser les rappels existants au démarrage
+        syncExistingReminders();
+    }
+}
+
+/************************************
+ * SECTION 13: GESTIONNAIRES D'EVENEMENTS
+ ************************************/
+
+// Event Listeners - Prayer Times Tab
 allowLocationBtn.addEventListener('click', async () => {
     locationPermissionEl.classList.add('hidden');
     await loadPrayerTimes();
 });
 
-// Load Surah button event handler
+calculationMethodSelect.addEventListener('change', () => {
+    loadPrayerTimes();
+});
+
+// Event Listeners - Quran Tab
 loadSurahBtn.addEventListener('click', async () => {
     const surahNumber = surahSelect.value;
     if (surahNumber) {
@@ -1497,7 +2292,6 @@ loadSurahBtn.addEventListener('click', async () => {
     }
 });
 
-// Continue reading button event handler
 continueReadingBtn.addEventListener('click', async () => {
     if (bookmarkData) {
         // Load the surah and scroll to the bookmarked verse
@@ -1519,10 +2313,6 @@ continueReadingBtn.addEventListener('click', async () => {
     }
 });
 
-// Doua search event handler
-douaSearchEl.addEventListener('input', updateDouasList);
-
-// Create reminder (surah) button handler
 createReminderBtn.addEventListener('click', () => {
     if (currentSurah) {
         const title = currentLanguage === 'fr' ? `Lire sourate ${currentSurah.englishName}` :
@@ -1532,7 +2322,6 @@ createReminderBtn.addEventListener('click', () => {
     }
 });
 
-// Share surah button handler
 shareSurahBtn.addEventListener('click', () => {
     if (currentSurah) {
         const shareTitle = currentSurah.englishName;
@@ -1548,7 +2337,9 @@ shareSurahBtn.addEventListener('click', () => {
     }
 });
 
-// Add reminder for doua button handler
+// Event Listeners - Douas Tab
+douaSearchEl.addEventListener('input', updateDouasList);
+
 addReminderDoua.addEventListener('click', () => {
     const title = currentLanguage === 'fr' ? 'Rappel pour lire des invocations' :
         currentLanguage === 'en' ? 'Reminder to read supplications' :
@@ -1559,8 +2350,51 @@ addReminderDoua.addEventListener('click', () => {
     createReading('general', 0, title, content);
 });
 
+// Event Listeners - Settings Tab
+themeToggle.addEventListener('change', () => {
+    if (themeToggle.checked) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
+});
 
-// Écouteur d'événements modifié pour saveReminderBtn
+languageBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const lang = btn.dataset.lang;
+        applyLanguage(lang);
+
+        // Reload prayer times to update city name and date format
+        if (currentPosition) {
+            loadPrayerTimes();
+        }
+
+        // Reload Quran surahs if the quran tab is active
+        if (document.getElementById('quran-content').classList.contains('active')) {
+            fetchQuranSurahs();
+
+            // Reload current surah if any
+            if (currentSurah) {
+                fetchQuranSurah(currentSurah.number);
+            }
+        }
+
+        // Update douas list if douas tab is active
+        if (document.getElementById('douas-content').classList.contains('active')) {
+            updateDouasList();
+        }
+    });
+});
+
+colorBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const color = btn.dataset.color;
+        applyThemeColor(color);
+    });
+});
+
+// Event Listeners - Reminder Modal
 saveReminderBtn.addEventListener('click', () => {
     const title = reminderTitleInput.value.trim();
     if (!title) {
@@ -1669,20 +2503,17 @@ saveReminderBtn.addEventListener('click', () => {
     }
 });
 
-
-// Cancel reminder button handler
 cancelReminderBtn.addEventListener('click', () => {
     reminderModal.classList.add('hidden');
 });
 
-// Close when clicking outside modal
 reminderModal.addEventListener('click', (e) => {
     if (e.target === reminderModal) {
         reminderModal.classList.add('hidden');
     }
 });
 
-// Copy share content button handler
+// Event Listeners - Share Modal
 copyShareBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(shareContentTextarea.value)
         .then(() => {
@@ -1693,7 +2524,6 @@ copyShareBtn.addEventListener('click', () => {
         });
 });
 
-// Native share button handler
 nativeShareBtn.addEventListener('click', () => {
     if (navigator.share) {
         navigator.share({
@@ -1706,287 +2536,73 @@ nativeShareBtn.addEventListener('click', () => {
     }
 });
 
-// Close share modal
 closeShareBtn.addEventListener('click', () => {
     shareModal.classList.add('hidden');
 });
 
-// Close when clicking outside share modal
 shareModal.addEventListener('click', (e) => {
     if (e.target === shareModal) {
         shareModal.classList.add('hidden');
     }
 });
 
-// Theme toggle event handler
-themeToggle.addEventListener('change', () => {
-    if (themeToggle.checked) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-    localStorage.setItem('theme', themeToggle.checked ? 'dark' : 'light');
-});
-
-// Language buttons event handlers
-languageBtns.forEach(btn => {
+// Tab Switching Logic
+tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-        const lang = btn.dataset.lang;
-        applyLanguage(lang);
+        const target = btn.id.replace('tab-', '');
 
-        // Reload prayer times to update city name and date format
-        if (currentPosition) {
-            loadPrayerTimes();
-        }
+        // Reset tabs
+        tabBtns.forEach(b => {
+            b.classList.remove('border-primary', 'text-primary');
+            b.classList.add('text-gray-500', 'dark:text-gray-400', 'border-transparent');
+        });
 
-        // Reload Quran surahs if the quran tab is active
-        if (document.getElementById('quran-content').classList.contains('active')) {
+        // Activate clicked tab
+        btn.classList.add('border-primary', 'text-primary');
+        btn.classList.remove('text-gray-500', 'dark:text-gray-400', 'border-transparent');
+
+        // Toggle content
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById(`${target}-content`).classList.add('active');
+
+        // Load specific content for tabs
+        if (target === 'quran' && !surahSelect.options.length) {
             fetchQuranSurahs();
-
-            // Reload current surah if any
-            if (currentSurah) {
-                fetchQuranSurah(currentSurah.number);
-            }
-        }
-
-        // Update douas list if douas tab is active
-        if (document.getElementById('douas-content').classList.contains('active')) {
+        } else if (target === 'douas' && douasListEl.children.length === 0) {
             updateDouasList();
         }
     });
 });
 
-// Theme color buttons event handlers
-colorBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const color = btn.dataset.color;
-        applyThemeColor(color);
-    });
-});
-
-// Load saved preferences
-function loadSavedPreferences() {
-    // Load theme
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-        themeToggle.checked = true;
-    } else if (savedTheme === 'light') {
-        document.documentElement.classList.remove('dark');
-        themeToggle.checked = false;
-    }
-
-    // Load language
-    const savedLanguage = localStorage.getItem('language');
-    if (savedLanguage && ['fr', 'en', 'ar'].includes(savedLanguage)) {
-        applyLanguage(savedLanguage);
-    } else {
-        applyLanguage('fr'); // Default to French
-    }
-
-    // Load theme color
-    const savedColor = localStorage.getItem('themeColor');
-    if (savedColor) {
-        applyThemeColor(savedColor);
-    } else {
-        applyThemeColor('#5D5CDE'); // Default primary color
-    }
-
-    // Load bookmarks
-    checkAndDisplayBookmark();
-
-    // Load reminders
-    loadReminders();
-}
+/************************************
+ * SECTION 14: INITIALISATION
+ ************************************/
 
 // Initialize app
 (async function init() {
+    console.log("Initialisation de l'application...");
     try {
-        // Load saved preferences
+        // Créer d'abord les composants UI dynamiques
+        createAdhanSettingsUI();
+
+        // Charger les préférences et paramètres
         loadSavedPreferences();
 
-        // Initialize tabs
-        await fetchQuranSurahs();
+        // Initialiser les modules
+        setupAdhanHandlers();
 
-        // Load prayer times
+        // Intégration Android
+        setTimeout(setupAndroidNotifications, 1000);
+
+        // Charger les données initiales de l'application
+        await fetchQuranSurahs();
         await loadPrayerTimes();
+
+        console.log("Initialisation terminée");
     } catch (error) {
         // Location permission error is already handled
         console.error('Initialization error:', error);
     }
 })();
-
-// Intégration des notifications natives Android
-// Cette fonction s'exécute après le chargement du document
-// mais aussi après l'initialisation de l'application
-function setupAndroidNotifications() {
-    // Vérifier si l'application native Android est disponible
-    if (window.AndroidInterface) {
-        console.log("Application Android détectée - Intégration des notifications natives activée");
-
-        // Remplacer la fonction checkUpcomingReminders pour utiliser les notifications natives
-        window.checkUpcomingReminders = function () {
-            const now = new Date();
-
-            reminders.forEach((reminder, index) => {
-                const reminderTime = new Date(reminder.datetime);
-
-                // Si le rappel est dû
-                if (reminderTime <= now) {
-                    // Envoyer une notification native via l'interface Android
-                    window.AndroidInterface.showNotificationNow(reminder.title, reminder.content);
-
-                    // Si c'est un rappel récurrent, le mettre à jour pour demain
-                    if (reminder.repeat) {
-                        const tomorrow = new Date(reminderTime);
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        reminders[index].datetime = tomorrow.toISOString();
-                    } else {
-                        // Supprimer les rappels ponctuels terminés
-                        reminders.splice(index, 1);
-                    }
-
-                    saveReminders();
-                }
-            });
-
-            // Vérifier à nouveau dans une minute
-            setTimeout(checkUpcomingReminders, 60000);
-        };
-
-        // Remplacer la fonction saveReminders pour planifier les notifications natives
-        // const originalSaveReminders = saveReminders;
-        // window.saveReminders = function () {
-        //     // Sauvegarder les rappels dans localStorage comme avant
-        //     originalSaveReminders();
-        //
-        //     // Planifier les notifications dans le système Android
-        //     reminders.forEach(reminder => {
-        //         const reminderTime = new Date(reminder.datetime).getTime();
-        //
-        //         // Ne planifier que les notifications futures
-        //         if (reminderTime > Date.now()) {
-        //             window.AndroidInterface.scheduleNotification(
-        //                 reminder.title,
-        //                 reminder.content,
-        //                 reminderTime,
-        //                 reminder.type,
-        //                 reminder.navigationId
-        //             );
-        //         }
-        //     });
-        // };
-
-        // Intercepter les demandes de Notification web
-        if ('Notification' in window) {
-            const originalNotification = window.Notification;
-            window.Notification = function (title, options) {
-                // Utiliser directement la notification native Android
-                window.AndroidInterface.showNotificationNow(title, options.body || "");
-
-                // Simuler l'API Notification pour la compatibilité
-                return {
-                    onclick: function () {
-                    },
-                    close: function () {
-                    }
-                };
-            };
-
-            // Simuler la permission toujours accordée
-            window.Notification.permission = "granted";
-            window.Notification.requestPermission = function (callback) {
-                if (callback) callback("granted");
-                return Promise.resolve("granted");
-            };
-        }
-
-        // Synchronisation des rappels existants
-        function syncExistingReminders() {
-            // Synchroniser tous les rappels existants avec le système Android
-            reminders.forEach(reminder => {
-                const reminderTime = new Date(reminder.datetime).getTime();
-
-                if (reminderTime > Date.now()) {
-                    window.AndroidInterface.scheduleNotification(
-                        reminder.title,
-                        reminder.content,
-                        reminderTime,
-                        reminder.type,
-                        reminder.navigationId
-                    );
-                }
-            });
-        }
-
-        // Synchroniser les rappels existants au démarrage
-        syncExistingReminders();
-    }
-}
-
-// Ajouter la fonction d'initialisation à la fin du code existant,
-// juste après la fonction init() pour s'assurer que tout est chargé
-document.addEventListener("DOMContentLoaded", function () {
-    // Le code original d'initialisation s'exécute d'abord
-
-    // Puis notre fonction de configuration des notifications Android
-    setTimeout(setupAndroidNotifications, 1000); // Délai pour s'assurer que tout est chargé
-});
-
-// Également appeler la fonction au cas où DOMContentLoaded s'est déjà produit
-if (document.readyState === "complete" || document.readyState === "interactive") {
-    setTimeout(setupAndroidNotifications, 1000);
-}
-
-// Ajouter cette fonction à votre code JavaScript priers.js
-function navigateToContent(type, id) {
-    console.log("Navigation vers:", type, id);
-
-    // Selon le type, naviguez vers le contenu approprié
-    if (type === 'surah') {
-        // Activer l'onglet Coran
-        document.getElementById('tab-quran').click();
-
-        // Sélectionner la sourate et la charger
-        const surahNumber = id;
-        if (surahSelect) {
-            surahSelect.value = surahNumber;
-            // Attendre un peu pour s'assurer que la valeur est bien définie
-            setTimeout(() => {
-                fetchQuranSurah(surahNumber);
-            }, 500);
-        }
-    } else if (type === 'verse') {
-        // Activer l'onglet Coran
-        document.getElementById('tab-quran').click();
-
-        // Les données sont au format 'surahNumber:verseNumber'
-        const [surahNumber, verseNumber] = id.split(':');
-
-        if (surahSelect) {
-            surahSelect.value = surahNumber;
-            // Charger la sourate puis défiler jusqu'au verset
-            setTimeout(() => {
-                fetchQuranSurah(surahNumber, `verse-${verseNumber}`);
-            }, 500);
-        }
-    } else if (type === 'doua') {
-        // Activer l'onglet Douas
-        document.getElementById('tab-douas').click();
-
-        // Chercher la doua par ID
-        const douaId = parseInt(id);
-        setTimeout(() => {
-            const douaElement = document.querySelector(`.doua-card[data-id="${douaId}"]`);
-            if (douaElement) {
-                // Faire défiler jusqu'à la doua
-                douaElement.scrollIntoView({behavior: 'smooth', block: 'center'});
-                // Mettre en évidence la doua
-                douaElement.classList.add('bg-primary/10');
-                setTimeout(() => {
-                    douaElement.classList.remove('bg-primary/10');
-                }, 2000);
-            }
-        }, 500);
-    }
-}
