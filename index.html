@@ -484,12 +484,47 @@
       </div>
 
       <!-- Gestion des rappels -->
-      <div>
+      <div class="mb-6">
         <h3 class="font-medium mb-2" id="reminders-title">Rappels</h3>
         <div id="reminders-list" class="bg-gray-50 dark:bg-gray-700 rounded-md p-4 space-y-2">
           <!-- Les rappels seront ajoutés dynamiquement ici -->
           <div id="no-reminders" class="text-center text-gray-500 dark:text-gray-400 py-2">
             <p id="no-reminders-text">Aucun rappel configuré</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section de téléchargement de l'application -->
+      <div class="mt-8">
+        <h3 class="text-lg font-semibold mb-4 text-primary flex items-center">
+          <i class="fas fa-mobile-alt mr-2"></i>
+          <span id="download-app-title">Application mobile</span>
+        </h3>
+
+        <div class="flex flex-col md:flex-row items-center gap-6 bg-white dark:bg-gray-800 rounded-lg p-5 shadow-sm">
+          <!-- Section QR Code -->
+          <div class="bg-white p-3 rounded-lg shadow-md flex-shrink-0 w-40 h-40 flex items-center justify-center">
+            <img id="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://priers-coran-app.onrender.com" alt="QR Code" class="w-full h-full">
+          </div>
+
+          <!-- Description -->
+          <div class="flex-1">
+            <h4 id="download-subtitle" class="font-semibold text-gray-800 dark:text-white mb-2">Téléchargez notre application Android</h4>
+            <p id="download-desc" class="text-gray-600 dark:text-gray-300 mb-4">Profitez de toutes les fonctionnalités même hors ligne, avec notifications pour les heures de prière et mode sombre automatique.</p>
+
+            <!-- Avantages en liste -->
+            <ul class="text-sm text-gray-600 dark:text-gray-300 mb-4 space-y-1">
+              <li id="feature-1" class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Notifications pour les heures de prière</li>
+              <li id="feature-2" class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Fonctionne hors ligne</li>
+              <li id="feature-3" class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i> Plus rapide et fluide</li>
+            </ul>
+
+            <!-- Bouton de téléchargement -->
+            <a href="https://priers-coran-app.onrender.com/download/priers-app.apk" target="_blank" class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors">
+              <i class="fas fa-download mr-2"></i>
+              <span id="download-button-text">Télécharger l'APK</span>
+            </a>
+            <p id="download-help" class="text-xs text-gray-500 dark:text-gray-400 mt-2">Scannez le QR code avec votre téléphone ou cliquez sur le bouton pour télécharger.</p>
           </div>
         </div>
       </div>
@@ -536,6 +571,66 @@
         <button id="save-reminder" class="px-4 py-2 bg-primary text-white rounded-md">
           <span id="save-reminder-text">Enregistrer</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de bienvenue - à insérer après la balise <body> et avant le toast -->
+  <div id="welcome-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 transition-opacity duration-300">
+    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl transform transition-transform duration-300 scale-100">
+      <div class="text-center mb-6">
+        <div class="flex justify-center mb-4">
+          <div class="h-20 w-20 rounded-full flex items-center justify-center bg-primary/10">
+            <i class="fas fa-mosque text-primary text-4xl"></i>
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-primary mb-2" id="welcome-title">Bienvenue dans l'application Prières & Coran</h2>
+        <p class="text-gray-600 dark:text-gray-300 mb-4" id="welcome-subtitle">Votre compagnon spirituel quotidien</p>
+      </div>
+
+      <div class="space-y-4 mb-6">
+        <div class="flex items-start">
+          <div class="bg-primary/10 p-2 rounded-full mr-4 mt-1">
+            <i class="fas fa-clock text-primary"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 dark:text-white" id="welcome-feature1-title">Horaires précis</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400" id="welcome-feature1-desc">Obtenez les horaires de prière exacts basés sur votre localisation</p>
+          </div>
+        </div>
+
+        <div class="flex items-start">
+          <div class="bg-primary/10 p-2 rounded-full mr-4 mt-1">
+            <i class="fas fa-book-quran text-primary"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 dark:text-white" id="welcome-feature2-title">Le Noble Coran</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400" id="welcome-feature2-desc">Lisez le Coran en arabe et dans votre langue</p>
+          </div>
+        </div>
+
+        <div class="flex items-start">
+          <div class="bg-primary/10 p-2 rounded-full mr-4 mt-1">
+            <i class="fas fa-hands-praying text-primary"></i>
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-800 dark:text-white" id="welcome-feature3-title">Douas essentielles</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400" id="welcome-feature3-desc">Accédez aux invocations pour chaque moment de la journée</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3">
+        <button id="welcome-start-btn" class="w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors">
+          <span id="welcome-start-text">Commencer</span>
+        </button>
+
+        <div class="flex items-center justify-center">
+          <label class="flex items-center text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+            <input type="checkbox" id="welcome-dontshow" class="mr-2">
+            <span id="welcome-dontshow-text">Ne plus afficher ce message</span>
+          </label>
+        </div>
       </div>
     </div>
   </div>

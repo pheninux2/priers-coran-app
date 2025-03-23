@@ -117,7 +117,25 @@ const translations = {
         stop: 'Arrêter',
         adhanEnabled: 'Adhan activé',
         adhanDisabled: 'Adhan désactivé',
-        beepEnabled: 'Bip activé'
+        beepEnabled: 'Bip activé',
+        downloadAppTitle: "Application mobile",
+        downloadSubtitle: "Téléchargez notre application Android",
+        downloadDesc: "Profitez de toutes les fonctionnalités même hors ligne, avec notifications pour les heures de prière et mode sombre automatique.",
+        feature1: "Notifications pour les heures de prière",
+        feature2: "Fonctionne hors ligne",
+        feature3: "Plus rapide et fluide",
+        downloadButtonText: "Télécharger l'APK",
+        downloadHelp: "Scannez le QR code avec votre téléphone ou cliquez sur le bouton pour télécharger.",
+        welcomeTitle: "Bienvenue dans l'application Prières & Coran",
+        welcomeSubtitle: "Votre compagnon spirituel quotidien",
+        welcomeFeature1Title: "Horaires précis",
+        welcomeFeature1Desc: "Obtenez les horaires de prière exacts basés sur votre localisation",
+        welcomeFeature2Title: "Le Noble Coran",
+        welcomeFeature2Desc: "Lisez le Coran en arabe et dans votre langue",
+        welcomeFeature3Title: "Douas essentielles",
+        welcomeFeature3Desc: "Accédez aux invocations pour chaque moment de la journée",
+        welcomeStartText: "Commencer",
+        welcomeDontShowText: "Ne plus afficher ce message"
     },
     en: {
         appTitle: "Prayer Times",
@@ -186,7 +204,25 @@ const translations = {
         stop: 'Stop',
         adhanEnabled: 'Adhan enabled',
         adhanDisabled: 'Adhan disabled',
-        beepEnabled: 'Beep enabled'
+        beepEnabled: 'Beep enabled',
+        downloadAppTitle: "Mobile App",
+        downloadSubtitle: "Download our Android application",
+        downloadDesc: "Enjoy all features even offline, with prayer time notifications and automatic dark mode.",
+        feature1: "Prayer time notifications",
+        feature2: "Works offline",
+        feature3: "Faster and smoother",
+        downloadButtonText: "Download APK",
+        downloadHelp: "Scan the QR code with your phone or click the button to download.",
+        welcomeTitle: "Welcome to Prayer & Quran App",
+        welcomeSubtitle: "Your daily spiritual companion",
+        welcomeFeature1Title: "Accurate Prayer Times",
+        welcomeFeature1Desc: "Get exact prayer times based on your location",
+        welcomeFeature2Title: "The Noble Quran",
+        welcomeFeature2Desc: "Read the Quran in Arabic and your language",
+        welcomeFeature3Title: "Essential Duas",
+        welcomeFeature3Desc: "Access supplications for every moment of the day",
+        welcomeStartText: "Get Started",
+        welcomeDontShowText: "Don't show this message again"
     },
     ar: {
         appTitle: "مواقيت الصلاة",
@@ -255,7 +291,25 @@ const translations = {
         stop: 'توقف',
         adhanEnabled: 'الأذان مفعّل',
         adhanDisabled: 'الأذان غير مفعّل',
-        beepEnabled: 'تنبيه صوتي مفعّل'
+        beepEnabled: 'تنبيه صوتي مفعّل',
+        downloadAppTitle: "تطبيق الجوال",
+        downloadSubtitle: "قم بتنزيل تطبيق الأندرويد الخاص بنا",
+        downloadDesc: "استمتع بجميع الميزات حتى عندما تكون غير متصل بالإنترنت، مع إشعارات لأوقات الصلاة والوضع المظلم التلقائي.",
+        feature1: "إشعارات بأوقات الصلاة",
+        feature2: "يعمل بدون إنترنت",
+        feature3: "أسرع وأكثر سلاسة",
+        downloadButtonText: "تنزيل APK",
+        downloadHelp: "امسح رمز QR باستخدام هاتفك أو انقر على الزر للتنزيل.",
+        welcomeTitle: "مرحبًا بك في تطبيق الصلاة والقرآن",
+        welcomeSubtitle: "رفيقك الروحي اليومي",
+        welcomeFeature1Title: "مواقيت دقيقة للصلاة",
+        welcomeFeature1Desc: "احصل على مواقيت دقيقة للصلاة بناءً على موقعك",
+        welcomeFeature2Title: "القرآن الكريم",
+        welcomeFeature2Desc: "اقرأ القرآن باللغة العربية ولغتك",
+        welcomeFeature3Title: "أدعية أساسية",
+        welcomeFeature3Desc: "الوصول إلى الأدعية لكل لحظة من اليوم",
+        welcomeStartText: "ابدأ",
+        welcomeDontShowText: "لا تظهر هذه الرسالة مرة أخرى"
     }
 };
 
@@ -1435,6 +1489,9 @@ function applyLanguage(lang) {
     currentLanguage = lang;
     const t = translations[lang];
 
+    // Mettre à jour les traductions de l'écran de bienvenue
+    updateWelcomeScreenTranslations();
+
     // Mettre à jour les traductions pour les paramètres d'adhan
     updateAdhanTranslations();
 
@@ -1460,7 +1517,15 @@ function applyLanguage(lang) {
     document.querySelector('#maghrib .prayer-name').textContent = t.maghribName;
     document.querySelector('#maghrib .prayer-description').textContent = t.maghribDesc;
     document.querySelector('#isha .prayer-name').textContent = t.ishaName;
-    document.querySelector('#isha .prayer-description').textContent = t.ishaDesc;
+    document.querySelector('#isha .prayer-description').textContent = t.ishaDesc;// Update download app section
+    document.getElementById('download-app-title').textContent = t.downloadAppTitle;
+    document.getElementById('download-subtitle').textContent = t.downloadSubtitle;
+    document.getElementById('download-desc').textContent = t.downloadDesc;
+    document.getElementById('feature-1').innerHTML = `<i class="fas fa-check text-green-500 mr-2"></i> ${t.feature1}`;
+    document.getElementById('feature-2').innerHTML = `<i class="fas fa-check text-green-500 mr-2"></i> ${t.feature2}`;
+    document.getElementById('feature-3').innerHTML = `<i class="fas fa-check text-green-500 mr-2"></i> ${t.feature3}`;
+    document.getElementById('download-button-text').textContent = t.downloadButtonText;
+    document.getElementById('download-help').textContent = t.downloadHelp;
 
     // Update location permission
     locationPermissionTextEl.textContent = t.locationPermission;
@@ -2576,6 +2641,62 @@ tabBtns.forEach(btn => {
     });
 });
 
+// Gestion de l'écran de bienvenue - à ajouter au début de la fonction init() ou juste après la déclaration des variables
+
+function setupWelcomeScreen() {
+    const welcomeModal = document.getElementById('welcome-modal');
+    const welcomeStartBtn = document.getElementById('welcome-start-btn');
+    const welcomeDontShow = document.getElementById('welcome-dontshow');
+
+    // Vérifier si l'utilisateur a déjà choisi de ne plus afficher l'écran
+    const hideWelcomeScreen = localStorage.getItem('hideWelcomeScreen') === 'true';
+
+    if (hideWelcomeScreen) {
+        // Cacher immédiatement si l'utilisateur a déjà choisi de ne plus l'afficher
+        welcomeModal.style.display = 'none';
+    } else {
+        // Sinon, afficher l'écran et configurer les gestionnaires d'événements
+        welcomeStartBtn.addEventListener('click', () => {
+            // Masquer avec animation
+            welcomeModal.classList.add('opacity-0');
+
+            setTimeout(() => {
+                welcomeModal.style.display = 'none';
+            }, 300);
+
+            // Si la case est cochée, enregistrer la préférence
+            if (welcomeDontShow.checked) {
+                localStorage.setItem('hideWelcomeScreen', 'true');
+            }
+        });
+    }
+
+    // Mettre à jour les traductions de l'écran de bienvenue
+    updateWelcomeScreenTranslations();
+}
+
+// Fonction pour mettre à jour les traductions de l'écran de bienvenue
+function updateWelcomeScreenTranslations() {
+    const t = translations[currentLanguage];
+
+    if (document.getElementById('welcome-title')) {
+        document.getElementById('welcome-title').textContent = t.welcomeTitle || 'Bienvenue dans l\'application Prières & Coran';
+        document.getElementById('welcome-subtitle').textContent = t.welcomeSubtitle || 'Votre compagnon spirituel quotidien';
+
+        document.getElementById('welcome-feature1-title').textContent = t.welcomeFeature1Title || 'Horaires précis';
+        document.getElementById('welcome-feature1-desc').textContent = t.welcomeFeature1Desc || 'Obtenez les horaires de prière exacts basés sur votre localisation';
+
+        document.getElementById('welcome-feature2-title').textContent = t.welcomeFeature2Title || 'Le Noble Coran';
+        document.getElementById('welcome-feature2-desc').textContent = t.welcomeFeature2Desc || 'Lisez le Coran en arabe et dans votre langue';
+
+        document.getElementById('welcome-feature3-title').textContent = t.welcomeFeature3Title || 'Douas essentielles';
+        document.getElementById('welcome-feature3-desc').textContent = t.welcomeFeature3Desc || 'Accédez aux invocations pour chaque moment de la journée';
+
+        document.getElementById('welcome-start-text').textContent = t.welcomeStartText || 'Commencer';
+        document.getElementById('welcome-dontshow-text').textContent = t.welcomeDontShowText || 'Ne plus afficher ce message';
+    }
+}
+
 /************************************
  * SECTION 14: INITIALISATION
  ************************************/
@@ -2584,6 +2705,9 @@ tabBtns.forEach(btn => {
 (async function init() {
     console.log("Initialisation de l'application...");
     try {
+        // Appel pour initialiser l'écran de bienvenue
+        setupWelcomeScreen();
+
         // Créer d'abord les composants UI dynamiques
         createAdhanSettingsUI();
 
