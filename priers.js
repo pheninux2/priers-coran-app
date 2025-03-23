@@ -2123,6 +2123,7 @@ function updateAdhanIndicators() {
 }
 
 // Fonction pour jouer l'adhan à l'heure de la prière
+// Fonction pour jouer l'adhan à l'heure de la prière
 function playAdhanAtPrayerTime(prayer) {
     if (!adhanSettings.enabled) return;
 
@@ -2133,16 +2134,83 @@ function playAdhanAtPrayerTime(prayer) {
 
     const adhanUrl = adhanPaths[adhanType];
 
+    // Si nous sommes dans l'application Android, utiliser son système de lecture
     if (window.AndroidInterface) {
-        // Utiliser l'interface Android pour jouer l'adhan
         window.AndroidInterface.playAdhan(adhanUrl, prayer);
-    } else {
-        // Fallback pour les navigateurs
+        return;
+    }
+
+    // Pour les navigateurs, afficher une notification avec bouton de lecture
+    // Créer une div pour la notification spéciale d'adhan
+    const adhanNotif = document.createElement('div');
+    adhanNotif.className = 'fixed bottom-4 left-4 right-4 bg-primary text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between';
+
+    // Obtenir le nom de la prière dans la langue actuelle
+    let prayerName = prayer;
+    if (prayer === 'Fajr') prayerName = translations[currentLanguage].fajrName;
+    else if (prayer === 'Dhuhr') prayerName = translations[currentLanguage].dhuhrName;
+    else if (prayer === 'Asr') prayerName = translations[currentLanguage].asrName;
+    else if (prayer === 'Maghrib') prayerName = translations[currentLanguage].maghribName;
+    else if (prayer === 'Isha') prayerName = translations[currentLanguage].ishaName;
+
+    // Message personnalisé selon la langue
+    const message = currentLanguage === 'fr' ?
+        `C'est l'heure de la prière ${prayerName}` :
+        currentLanguage === 'en' ?
+            `It's time for ${prayerName} prayer` :
+            `حان وقت صلاة ${prayerName}`;
+
+    // Texte du bouton selon la langue
+    const buttonText = currentLanguage === 'fr' ?
+        "Écouter l'adhan" :
+        currentLanguage === 'en' ?
+            "Play adhan" :
+            "تشغيل الأذان";
+
+    // Contenu de la notification
+    adhanNotif.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-mosque mr-3 text-xl"></i>
+            <div>
+                <p class="font-bold">${message}</p>
+            </div>
+        </div>
+        <div class="flex items-center">
+            <button id="play-adhan-btn" class="bg-white text-primary px-4 py-2 rounded-md font-medium hover:bg-opacity-90 transition-colors">
+                <i class="fas fa-play mr-2"></i>${buttonText}
+            </button>
+            <button id="close-adhan-notif" class="ml-2 text-white p-2 rounded-full hover:bg-white/20">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+
+    // Ajouter la notification au document
+    document.body.appendChild(adhanNotif);
+
+    // Gérer le clic sur le bouton de lecture
+    document.getElementById('play-adhan-btn').addEventListener('click', function() {
         const audio = new Audio(adhanUrl);
         audio.play().catch(error => {
             console.error('Error playing adhan:', error);
         });
-    }
+
+        // Optionnel: masquer le bouton de lecture après avoir cliqué
+        this.disabled = true;
+        this.innerHTML = `<i class="fas fa-volume-up mr-2"></i>${currentLanguage === 'fr' ? 'En cours...' : currentLanguage === 'en' ? 'Playing...' : 'جاري التشغيل...'}`;
+    });
+
+    // Gérer la fermeture de la notification
+    document.getElementById('close-adhan-notif').addEventListener('click', function() {
+        adhanNotif.remove();
+    });
+
+    // Masquer automatiquement après 2 minutes si l'utilisateur n'interagit pas
+    setTimeout(() => {
+        if (document.body.contains(adhanNotif)) {
+            adhanNotif.remove();
+        }
+    }, 120000);
 }
 
 // Fonction pour configurer les gestionnaires d'événements pour Adhan
